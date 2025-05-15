@@ -1,0 +1,53 @@
+SISTEMA INTEGRA UBS - INSTRUÇÕES PARA IMPLANTAÇÃO NO RENDER
+================================================================
+
+Este projeto está configurado para ser implantado na plataforma Render (render.com)
+usando PostgreSQL para armazenamento persistente de dados.
+
+## PASSOS PARA IMPLANTAÇÃO:
+
+1. Criar uma conta no Render (https://render.com) se ainda não tiver
+
+2. No painel do Render, clique em "New" e selecione "Blueprint"
+
+3. Conecte seu repositório GitHub com este código
+   - Alternativa: faça um fork deste repositório para sua conta GitHub
+
+4. O Render detectará automaticamente o arquivo render.yaml e configurará:
+   - Um serviço web para a aplicação Flask
+   - Um banco de dados PostgreSQL com plano inicial
+
+5. Confirme a instalação e aguarde a implantação (pode levar alguns minutos)
+
+6. Após a implantação, acesse o URL fornecido pelo Render para acessar o sistema
+
+## COMO FUNCIONA A IMPLANTAÇÃO:
+
+- O arquivo app.py detecta automaticamente a variável de ambiente DATABASE_URL para usar PostgreSQL
+- O script start.sh inicializa automaticamente o banco de dados, criando tabelas e usuários padrão
+- O arquivo render.yaml configura todos os serviços e variáveis de ambiente necessários
+
+## USUÁRIOS PADRÃO CRIADOS AUTOMATICAMENTE:
+
+- admin / 1234  (Administrador)
+- medico / 1234 (Médico)
+- enfermeiro / 1234 (Enfermeiro)
+- farmaceutico / 1234 (Farmacêutico)
+- recepcionista / 1234 (Recepcionista)
+
+## OBSERVAÇÕES IMPORTANTES:
+
+1. O SQLite não é usado em produção no Render, pois o Render apaga arquivos locais após cada implantação.
+
+2. Para desenvolvimento local, você pode executar o aplicativo sem a variável DATABASE_URL
+   e ele usará SQLite automaticamente (ideal para testes).
+
+3. Se você modificar os modelos de dados, use o Shell do Render para aplicar as mudanças:
+   python db_scripts.py create_tables
+
+4. Os dados cadastrados (pacientes, medicamentos, etc.) permanecem armazenados no PostgreSQL
+   e não são perdidos entre implantações.
+
+5. A aplicação é executada com gunicorn com múltiplos workers para melhor desempenho.
+
+Para mais detalhes técnicos, consulte o README_RENDER.md incluído neste projeto.

@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+
+{% block title %}Prontuário - {{ patient.nome }} - Integra UBS{% endblock %}
+
+{% block content %}
+<div class="prontuario-page">
+    <div class="page-header">
+        <div>
+            <h2>Prontuário do Paciente</h2>
+            <p class="mb-0">{{ patient.nome }}</p>
+        </div>
+        <div class="page-actions">
+            <a href="{{ url_for('pacientes') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </a>
+            {% if current_user.role in ['admin', 'medico'] %}
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newRecordModal">
+                <i class="fas fa-plus"></i> Novo Registro
+            </button>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <div class="page-card">
+                <h4>Informações do Paciente</h4>
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <th>Nome:</th>
+                            <td>{{ patient.nome }}</td>
+                        </tr>
+                        <tr>
+                            <th>CPF:</th>
+                            <td>{{ patient.cpf or 'Não informado' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Data de Nascimento:</th>
+                            <td>{{ patient.data_nascimento.strftime('%d/%m/%Y') if patient.data_nascimento else 'Não informada' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Sexo:</th>
+                            <td>{{ patient.sexo or 'Não informado' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Telefone:</th>
+                            <td>{{ patient.telefone or 'Não informado' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Cartão SUS:</th>
+                            <td>{{ patient.sus_card or 'Não informado' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Endereço:</th>
+                            <td>{{ patient.endereco or 'Não informado' }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="page-card mt-4">
+                <h4>Prescrições Recentes</h4>
+                <div class="list-group">
+                    {% for prescription in prescriptions %}
+                    <a href="{{ url_for('ver_prescricao', id=prescription.id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">Prescrição #{{ prescription.id }}</h5>
+                            <small>{{ prescription.date.strftime('%d/%m/%Y') }}</small>
+                        </div>
+                        <p class="mb-1">Dr. {{ prescription.doctor.nome }}</p>
+                        <span class="badge {{ 'bg-warning' if prescription.status == 'pendente' else 'bg-success' if prescription.status == 'dispensado' else 'bg-secondary' }}">
+                            {{ prescription.status }}
+                        </span>
+                    </a>
+                    {% else %}
+                    <div class="list-group-item">
+                        <p class="mb-0 text-center">Nenhuma prescrição encontrada</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="page-card">
+                <h4>Histórico de Atendimentos</h4>
+                
+                {% if records %}
+                <div class="accordion" id="recordsAccordion">
+                    {% for record in records %}
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="heading{{ record.id }}">
+                            <button class="accordion-button {{ 'collapsed' if not loop.first }}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ record.id }}" aria-expanded="{{ 'true' if loop.first else 'false' }}" aria-controls="collapse{{ record.id }}">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <span>Atendimento em {{ record.date.strftime('%d/%m/%Y') }}</span>
+                                    <small>Dr. {{ record.doctor.nome }}</small>
+                                </div>
+                            </button>
+                        </h2>
+                        <div id="collapse{{ record.id }}" class="accordion-collapse collapse {{ 'show' if loop.first }}" aria-labelledby="heading{{ record.id }}" data-bs-parent="#recordsAccordion">
+                            <div class="accordion-body">
+                                <div class="mb-3">
+                                    <strong>Queixa Principal:</strong>
+                                    <p>{{ record.complaint or 'Não informada' }}</p>
+                                </div>
+                                <div class="mb-3">
+                                    <strong>Diagnóstico:</strong>
+                                    <p>{{ record.diagnosis or 'Não informado' }}</p>
+                                </div>
+                                <div class="mb-3">
+                                    <strong>Tratamento:</strong>
+                                    <p>{{ record.treatment or 'Não informado' }}</p>
+                                </div>
+                                <div>
+                                    <strong>Observações:</strong>
+                                    <p class="mb-0">{{ record.observations or 'Não informadas' }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    Nenhum registro de atendimento encontrado para este paciente.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para adicionar novo registro ao prontuário -->
+{% if current_user.role in ['admin', 'medico'] %}
+<div class="modal fade" id="newRecordModal" tabindex="-1" aria-labelledby="newRecordModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newRecordModalLabel">Novo Registro - {{ patient.nome }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form action="{{ url_for('novo_registro_prontuario', patient_id=patient.id) }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="complaint" class="form-label">Queixa Principal</label>
+                        <textarea class="form-control" id="complaint" name="complaint" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="diagnosis" class="form-label">Diagnóstico</label>
+                        <textarea class="form-control" id="diagnosis" name="diagnosis" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="treatment" class="form-label">Tratamento</label>
+                        <textarea class="form-control" id="treatment" name="treatment" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="observations" class="form-label">Observações</label>
+                        <textarea class="form-control" id="observations" name="observations" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

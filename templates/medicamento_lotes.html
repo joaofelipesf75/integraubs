@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+
+{% block title %}Lotes de {{ medication.nome }} - Integra UBS{% endblock %}
+
+{% block content %}
+<div class="medicamento-lotes-page">
+    <div class="page-header">
+        <div>
+            <h2>Lotes de Medicamento</h2>
+            <p class="mb-0">{{ medication.nome }} {{ medication.concentracao or '' }}</p>
+        </div>
+        <div class="page-actions">
+            <a href="{{ url_for('medicamentos') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </a>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newBatchModal">
+                <i class="fas fa-plus"></i> Novo Lote
+            </button>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <div class="page-card">
+                <h4>Informações do Medicamento</h4>
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <th>Nome:</th>
+                            <td>{{ medication.nome }}</td>
+                        </tr>
+                        <tr>
+                            <th>Princípio Ativo:</th>
+                            <td>{{ medication.principio_ativo or 'Não informado' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Forma:</th>
+                            <td>{{ medication.forma or 'Não informada' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Concentração:</th>
+                            <td>{{ medication.concentracao or 'Não informada' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Estoque Total:</th>
+                            <td>
+                                <span class="badge {{ 'bg-success' if medication.stock_total() > 20 else 'bg-warning' if medication.stock_total() > 10 else 'bg-danger' }}">
+                                    {{ medication.stock_total() }}
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="page-card">
+                <h4>Lotes Cadastrados</h4>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Lote</th>
+                                <th>Validade</th>
+                                <th>Quant. Inicial</th>
+                                <th>Quant. Atual</th>
+                                <th>Data Cadastro</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for batch in batches %}
+                            <tr>
+                                <td>{{ batch.lote }}</td>
+                                <td>
+                                    <span class="badge {{ 'bg-danger' if (batch.validade - now.date()).days < 30 else 'bg-warning' if (batch.validade - now.date()).days < 90 else 'bg-success' }}">
+                                        {{ batch.validade.strftime('%d/%m/%Y') }}
+                                        {% if (batch.validade - now.date()).days < 30 %}
+                                            <i class="fas fa-exclamation-circle ms-1" title="Próximo da validade!"></i>
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td>{{ batch.quantidade_inicial }}</td>
+                                <td>
+                                    <span class="badge {{ 'bg-success' if batch.quantidade_atual > 20 else 'bg-warning' if batch.quantidade_atual > 10 else 'bg-danger' }}">
+                                        {{ batch.quantidade_atual }}
+                                    </span>
+                                </td>
+                                <td>{{ batch.created_at.strftime('%d/%m/%Y') }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-sm btn-primary" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#editBatchModal{{ batch.id }}">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-danger" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#deleteBatchModal{{ batch.id }}">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center">Nenhum lote cadastrado para este medicamento</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para adicionar novo lote -->
+<div class="modal fade" id="newBatchModal" tabindex="-1" aria-labelledby="newBatchModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newBatchModalLabel">Novo Lote - {{ medication.nome }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form action="{{ url_for('novo_lote', medication_id=medication.id) }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="lote" class="form-label">Número do Lote</label>
+                        <input type="text" class="form-control" id="lote" name="lote" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="validade" class="form-label">Data de Validade</label>
+                        <input type="date" class="form-control" id="validade" name="validade" 
+                               required 
+                               data-date-format="Y-m-d"
+                               data-alt-format="d/m/Y">
+                        <small class="form-text text-muted">Selecione a data de validade do medicamento</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="quantidade" class="form-label">Quantidade</label>
+                        <input type="number" class="form-control" id="quantidade" name="quantidade" min="1" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Adicionar Lote</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modais para editar e excluir lotes -->
+{% for batch in batches %}
+<!-- Modal de Edição de Lote -->
+<div class="modal fade" id="editBatchModal{{ batch.id }}" tabindex="-1" aria-labelledby="editBatchModalLabel{{ batch.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editBatchModalLabel{{ batch.id }}">Editar Lote</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form action="{{ url_for('editar_lote', batch_id=batch.id) }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="lote{{ batch.id }}" class="form-label">Número do Lote</label>
+                        <input type="text" class="form-control" id="lote{{ batch.id }}" name="lote" value="{{ batch.lote }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="validade{{ batch.id }}" class="form-label">Data de Validade</label>
+                        <input type="date" class="form-control" id="validade{{ batch.id }}" name="validade" 
+                               value="{{ batch.validade.strftime('%Y-%m-%d') }}"
+                               required 
+                               data-date-format="Y-m-d"
+                               data-alt-format="d/m/Y">
+                        <small class="form-text text-muted">Data atual: {{ batch.validade.strftime('%d/%m/%Y') }}</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="quantidade_atual{{ batch.id }}" class="form-label">Quantidade Atual</label>
+                        <input type="number" class="form-control" id="quantidade_atual{{ batch.id }}" name="quantidade_atual" value="{{ batch.quantidade_atual }}" min="0" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Exclusão de Lote -->
+<div class="modal fade" id="deleteBatchModal{{ batch.id }}" tabindex="-1" aria-labelledby="deleteBatchModalLabel{{ batch.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteBatchModalLabel{{ batch.id }}">Confirmar Exclusão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja excluir o lote <strong>{{ batch.lote }}</strong>?</p>
+                <p class="text-danger">Esta ação não pode ser desfeita.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form action="{{ url_for('excluir_lote', batch_id=batch.id) }}" method="POST" style="display:inline;">
+                    <button type="submit" class="btn btn-danger">Confirmar Exclusão</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

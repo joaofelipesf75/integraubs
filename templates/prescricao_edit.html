@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+
+{% block title %}Editar Prescrição - Integra UBS{% endblock %}
+
+{% block content %}
+<div class="prescricao-form-page">
+    <div class="page-header">
+        <h2>Editar Prescrição #{{ prescription.id }}</h2>
+        <div class="page-actions">
+            <a href="{{ url_for('ver_prescricao', id=prescription.id) }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </a>
+        </div>
+    </div>
+    
+    <div class="page-card">
+        <form action="{{ url_for('editar_prescricao', id=prescription.id) }}" method="POST">
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <h5>1. Informações do Paciente</h5>
+                    <div class="mb-3">
+                        <label for="patient_id" class="form-label">Paciente</label>
+                        <p class="form-control-static">{{ prescription.patient.nome }} {% if prescription.patient.data_nascimento %}({{ prescription.patient.data_nascimento.strftime('%d/%m/%Y') }}){% endif %}</p>
+                        <!-- Não permitimos alterar o paciente da prescrição, apenas exibimos o atual -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <h5>2. Medicamentos Prescritos</h5>
+                    {% if has_dispensing %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> Esta prescrição já teve medicamentos dispensados. Você não pode alterar medicamentos existentes, apenas adicionar novos ou editar instruções.
+                    </div>
+                    {% endif %}
+                    
+                    <div id="prescriptionItems">
+                        <div class="table-responsive">
+                            <table class="table" id="medicationsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Medicamento</th>
+                                        <th>Quantidade</th>
+                                        <th>Instruções</th>
+                                        <th width="50"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in items %}
+                                    <tr>
+                                        <td>
+                                            <!-- Campo oculto para manter ID do item existente -->
+                                            <input type="hidden" name="item_id[]" value="{{ item.id }}">
+                                            
+                                            {% if has_dispensing %}
+                                            <!-- Se já foi dispensado, não permite alterar medicamento -->
+                                            <input type="hidden" name="medication_id[]" value="{{ item.medication_id }}">
+                                            <p class="form-control-static">
+                                                {{ item.medication.nome }} {{ item.medication.concentracao or '' }}
+                                            </p>
+                                            {% else %}
+                                            <!-- Se não foi dispensado, permite alterar -->
+                                            <select class="form-select" name="medication_id[]" required>
+                                                <option value="">Selecione um medicamento</option>
+                                                {% for medication in medications %}
+                                                <option value="{{ medication.id }}" {% if medication.id == item.medication_id %}selected{% endif %}>
+                                                    {{ medication.nome }} {{ medication.concentracao or '' }}
+                                                    ({{ medication.stock_total() }} em estoque)
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if has_dispensing %}
+                                            <!-- Se já foi dispensado, não permite alterar quantidade -->
+                                            <input type="hidden" name="quantidade[]" value="{{ item.quantidade }}">
+                                            <p class="form-control-static">{{ item.quantidade }}</p>
+                                            {% else %}
+                                            <!-- Se não foi dispensado, permite alterar quantidade -->
+                                            <input type="number" class="form-control" name="quantidade[]" min="1" value="{{ item.quantidade }}" required>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <!-- Sempre permite editar instruções -->
+                                            <input type="text" class="form-control" name="instrucoes[]" value="{{ item.instrucoes or '' }}" placeholder="Ex: 1 comprimido a cada 8h">
+                                        </td>
+                                        <td>
+                                            {% if has_dispensing %}
+                                            <!-- Não permite remover se já foi dispensado -->
+                                            <button type="button" class="btn btn-sm btn-secondary" disabled>
+                                                <i class="fas fa-lock"></i>
+                                            </button>
+                                            {% else %}
+                                            <!-- Permite remover se não foi dispensado -->
+                                            <button type="button" class="btn btn-sm btn-danger btn-remove-row" {% if loop.index == 1 and items|length == 1 %}disabled{% endif %}>
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-end">
+                            <button type="button" class="btn btn-info" id="addMedicationBtn">
+                                <i class="fas fa-plus"></i> Adicionar Medicamento
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <h5>3. Informações Adicionais</h5>
+                    <div class="mb-3">
+                        <label for="observacoes" class="form-label">Observações</label>
+                        <textarea class="form-control" id="observacoes" name="observacoes" rows="3" placeholder="Observações sobre a prescrição, se necessário">{{ prescription.observacoes or '' }}</textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-12 text-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Salvar Alterações
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const medicationsTable = document.getElementById('medicationsTable').querySelector('tbody');
+    const addMedicationBtn = document.getElementById('addMedicationBtn');
+    
+    // Função para adicionar nova linha
+    addMedicationBtn.addEventListener('click', function() {
+        const newRow = document.createElement('tr');
+        
+        // Buscar o primeiro select de medicamentos para clonar
+        // (se não existir, significa que todos os itens da prescrição já foram dispensados)
+        const firstSelect = medicationsTable.querySelector('select[name="medication_id[]"]');
+        
+        if (firstSelect) {
+            // Clonar o primeiro select de medicamentos
+            const medicationSelect = firstSelect.cloneNode(true);
+            medicationSelect.value = ''; // Reset do valor selecionado
+            
+            newRow.innerHTML = `
+                <td></td>
+                <td>
+                    <input type="number" class="form-control" name="quantidade[]" min="1" value="1" required>
+                </td>
+                <td>
+                    <input type="text" class="form-control" name="instrucoes[]" placeholder="Ex: 1 comprimido a cada 8h">
+                </td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-danger btn-remove-row">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </td>
+            `;
+            
+            // Inserir o select clonado
+            newRow.querySelector('td:first-child').appendChild(medicationSelect);
+        } else {
+            // Criar um novo select com todos os medicamentos
+            newRow.innerHTML = `
+                <td>
+                    <select class="form-select" name="medication_id[]" required>
+                        <option value="">Selecione um medicamento</option>
+                        {% for medication in medications %}
+                        <option value="{{ medication.id }}">
+                            {{ medication.nome }} {{ medication.concentracao or '' }}
+                            ({{ medication.stock_total() }} em estoque)
+                        </option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td>
+                    <input type="number" class="form-control" name="quantidade[]" min="1" value="1" required>
+                </td>
+                <td>
+                    <input type="text" class="form-control" name="instrucoes[]" placeholder="Ex: 1 comprimido a cada 8h">
+                </td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-danger btn-remove-row">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </td>
+            `;
+        }
+        
+        // Adicionar evento para remover linha
+        newRow.querySelector('.btn-remove-row').addEventListener('click', function() {
+            newRow.remove();
+        });
+        
+        medicationsTable.appendChild(newRow);
+        
+        // Habilitar todos os botões de remoção
+        const removeButtons = medicationsTable.querySelectorAll('.btn-remove-row');
+        removeButtons.forEach(button => {
+            button.disabled = false;
+        });
+    });
+    
+    // Adicionar eventos de remoção para as linhas existentes
+    const existingRemoveButtons = medicationsTable.querySelectorAll('.btn-remove-row');
+    existingRemoveButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            button.closest('tr').remove();
+            
+            // Se só sobrou uma linha, desabilitar seu botão de remoção
+            const remainingButtons = medicationsTable.querySelectorAll('.btn-remove-row');
+            if (remainingButtons.length === 1) {
+                remainingButtons[0].disabled = true;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard Simples - Integra UBS</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .card { 
+            border: 1px solid #ccc; 
+            padding: 10px; 
+            margin-bottom: 10px; 
+            border-radius: 5px;
+        }
+        .header { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Integra UBS - Versão Debug</h1>
+    
+    <div class="card">
+        <div class="header">Estatísticas</div>
+        <div>Pacientes: {{ patients_count }}</div>
+        <div>Consultas Realizadas: {{ consultas_realizadas }}</div>
+        <div>Consultas do Mês: {{ consultas_mes }}</div>
+        <div>Medicamentos Vencidos: {{ medicamentos_vencidos }}</div>
+    </div>
+    
+    <div class="card">
+        <div class="header">Atividades Recentes</div>
+        <ul>
+        {% for atividade in atividades_recentes %}
+            <li>{{ atividade.texto }} ({{ atividade.tempo }})</li>
+        {% endfor %}
+        </ul>
+    </div>
+    
+    <div class="card">
+        <div class="header">Chat</div>
+        <div>- Olá Dr. João, temos o medicamento para o paciente Silva?</div>
+        <div>- Sim, temos disponível. O paciente já está aguardando na recepção.</div>
+    </div>
+</body>
+</html>

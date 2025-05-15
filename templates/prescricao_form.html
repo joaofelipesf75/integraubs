@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+
+{% block title %}Nova Prescrição - Integra UBS{% endblock %}
+
+{% block content %}
+<div class="prescricao-form-page">
+    <div class="page-header">
+        <h2>Nova Prescrição</h2>
+        <div class="page-actions">
+            <a href="{{ url_for('farmacia') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </a>
+        </div>
+    </div>
+    
+    <div class="page-card">
+        <form action="{{ url_for('nova_prescricao') }}" method="POST">
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <h5>1. Selecione o Paciente</h5>
+                    <div class="mb-3">
+                        <label for="patient_id" class="form-label">Paciente</label>
+                        <select class="form-select" id="patient_id" name="patient_id" required>
+                            <option value="">Selecione um paciente</option>
+                            {% for patient in patients %}
+                            <option value="{{ patient.id }}">{{ patient.nome }} {% if patient.data_nascimento %}({{ patient.data_nascimento.strftime('%d/%m/%Y') }}){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <h5>2. Adicione os Medicamentos</h5>
+                    <div id="prescriptionItems">
+                        <div class="table-responsive">
+                            <table class="table" id="medicationsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Medicamento</th>
+                                        <th>Quantidade</th>
+                                        <th>Instruções</th>
+                                        <th width="50"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <select class="form-select" name="medication_id[]" required>
+                                                <option value="">Selecione um medicamento</option>
+                                                {% for medication in medications %}
+                                                <option value="{{ medication.id }}">
+                                                    {{ medication.nome }} {{ medication.concentracao or '' }}
+                                                    ({{ medication.stock_total() }} em estoque)
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control" name="quantidade[]" min="1" value="1" required>
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control" name="instrucoes[]" placeholder="Ex: 1 comprimido a cada 8h">
+                                        </td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-danger btn-remove-row" disabled>
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-end">
+                            <button type="button" class="btn btn-info" id="addMedicationBtn">
+                                <i class="fas fa-plus"></i> Adicionar Medicamento
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <h5>3. Informações Adicionais</h5>
+                    <div class="mb-3">
+                        <label for="observacoes" class="form-label">Observações</label>
+                        <textarea class="form-control" id="observacoes" name="observacoes" rows="3" placeholder="Observações sobre a prescrição, se necessário"></textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-12 text-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Salvar Prescrição
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const medicationsTable = document.getElementById('medicationsTable').querySelector('tbody');
+    const addMedicationBtn = document.getElementById('addMedicationBtn');
+    
+    // Função para adicionar nova linha
+    addMedicationBtn.addEventListener('click', function() {
+        const newRow = document.createElement('tr');
+        
+        // Clonar o primeiro select de medicamentos
+        const medicationSelect = medicationsTable.querySelector('tr:first-child select').cloneNode(true);
+        medicationSelect.value = ''; // Reset do valor selecionado
+        
+        newRow.innerHTML = `
+            <td></td>
+            <td>
+                <input type="number" class="form-control" name="quantidade[]" min="1" value="1" required>
+            </td>
+            <td>
+                <input type="text" class="form-control" name="instrucoes[]" placeholder="Ex: 1 comprimido a cada 8h">
+            </td>
+            <td>
+                <button type="button" class="btn btn-sm btn-danger btn-remove-row">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </td>
+        `;
+        
+        // Inserir o select clonado
+        newRow.querySelector('td:first-child').appendChild(medicationSelect);
+        
+        // Adicionar evento para remover linha
+        newRow.querySelector('.btn-remove-row').addEventListener('click', function() {
+            newRow.remove();
+        });
+        
+        medicationsTable.appendChild(newRow);
+    });
+    
+    // Habilitar remoção da primeira linha se adicionar mais
+    addMedicationBtn.addEventListener('click', function() {
+        const removeButtons = medicationsTable.querySelectorAll('.btn-remove-row');
+        removeButtons.forEach(button => {
+            button.disabled = false;
+        });
+    });
+});
+</script>
+{% endblock %}

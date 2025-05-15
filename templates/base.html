@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>{% block title %}Integra UBS - Sistema de Gestão Integrada UBS{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Flatpickr para seleção de datas -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <!-- Additional CSS -->
+    {% block extra_css %}{% endblock %}
+    
+    <!-- CSS específico para o bate-papo no estilo balão -->
+    <style>
+        /* Estilo do bate-papo tipo balão */
+        .chat-container {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 350px;
+            height: 450px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 9999;
+            display: none;
+        }
+        
+        .chat-container.active {
+            display: flex;
+        }
+        
+        .chat-header {
+            background-color: #4361ee;
+            color: #fff;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .chat-header h5 {
+            margin: 0;
+            font-size: 16px;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background-color: #f5f7fb;
+        }
+        
+        .chat-message {
+            max-width: 80%;
+            margin-bottom: 15px;
+            clear: both;
+        }
+        
+        .chat-message.sent {
+            float: right;
+        }
+        
+        .chat-message.received {
+            float: left;
+        }
+        
+        .chat-message.system {
+            width: 100%;
+            text-align: center;
+            margin: 10px 0;
+        }
+        
+        .mensagem-texto {
+            padding: 10px 15px;
+            border-radius: 15px;
+            position: relative;
+            word-break: break-word;
+        }
+        
+        .chat-message.sent .mensagem-texto {
+            background-color: #4361ee;
+            color: #fff;
+            border-top-right-radius: 0;
+        }
+        
+        .chat-message.received .mensagem-texto {
+            background-color: #e9ecef;
+            color: #212529;
+            border-top-left-radius: 0;
+        }
+        
+        .chat-message.system .mensagem-texto {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-radius: 5px;
+            font-size: 12px;
+            padding: 5px 10px;
+            display: inline-block;
+        }
+        
+        .mensagem-info {
+            margin-top: 5px;
+            font-size: 12px;
+        }
+        
+        .chat-message.sent .mensagem-info {
+            text-align: right;
+        }
+        
+        .chat-message.received .mensagem-info {
+            text-align: left;
+        }
+        
+        .chat-input {
+            display: flex;
+            padding: 10px;
+            background-color: #fff;
+            border-top: 1px solid #ddd;
+        }
+        
+        .chat-input input {
+            flex: 1;
+            padding: 8px 15px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            outline: none;
+        }
+        
+        .chat-input button {
+            background-color: #4361ee;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-left: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .chat-input button:hover {
+            background-color: #3247b5;
+        }
+        
+        .chat-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background-color: #4361ee;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 999;
+            transition: all 0.3s;
+        }
+        
+        .chat-toggle::before {
+            content: '\f075';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            font-size: 22px;
+        }
+        
+        .chat-toggle.active {
+            transform: scale(0.9);
+            background-color: #3247b5;
+        }
+        
+        /* Estilo para os controles de mensagem (editar/excluir) */
+        .message-controls {
+            display: inline-flex;
+            gap: 5px;
+            margin-left: 10px;
+            opacity: 0.5;
+            transition: opacity 0.3s;
+        }
+        
+        .message-controls:hover {
+            opacity: 1;
+        }
+        
+        .btn-edit-message, .btn-delete-message {
+            border: none;
+            background: none;
+            color: inherit;
+            font-size: 0.8em;
+            cursor: pointer;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+        
+        .btn-edit-message:hover {
+            color: #0d6efd;
+        }
+        
+        .btn-delete-message:hover {
+            color: #dc3545;
+        }
+        
+        /* Estilo para o modo de edição */
+        .chat-message.editing .mensagem-texto {
+            border: 1px dashed #999;
+            background-color: rgba(255, 255, 255, 0.8);
+            color: #000;
+            padding: 5px;
+            margin-bottom: 5px;
+        }
+        
+        .edit-message-form {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .edit-message-textarea {
+            width: 100%;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9em;
+            min-height: 60px;
+        }
+        
+        .edit-message-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 5px;
+        }
+        
+        .btn-save-edit, .btn-cancel-edit {
+            border: none;
+            padding: 2px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+        }
+        
+        .btn-save-edit {
+            background-color: #0d6efd;
+            color: white;
+        }
+        
+        .btn-cancel-edit {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+
+    </style>
+</head>
+<body>
+    {% if current_user.is_authenticated %}
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <svg width="30" height="30" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="45" fill="#0066cc" />
+                <path d="M30 50 L70 50 M50 30 L50 70" stroke="white" stroke-width="8" stroke-linecap="round" />
+            </svg>
+            <h1>Integra UBS</h1>
+        </div>
+        
+        <ul class="nav flex-column sidebar-nav">
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if request.endpoint == 'dashboard' else '' }}" href="{{ url_for('dashboard') }}">
+                    <i class="fas fa-home"></i> Início
+                </a>
+            </li>
+            
+            {% if current_user.role in ['admin', 'medico', 'enfermeiro', 'farmaceutico', 'recepcionista'] %}
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if request.endpoint == 'pacientes' else '' }}" href="{{ url_for('pacientes') }}">
+                    <i class="fas fa-user-injured"></i> Pacientes
+                </a>
+            </li>
+            {% endif %}
+            
+            {% if current_user.role in ['admin', 'medico', 'farmaceutico', 'enfermeiro'] %}
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if request.endpoint == 'medicamentos' else '' }}" href="{{ url_for('medicamentos') }}">
+                    <i class="fas fa-pills"></i> Estoque
+                </a>
+            </li>
+            {% endif %}
+            
+            {% if current_user.role in ['admin', 'medico', 'farmaceutico', 'enfermeiro'] %}
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if request.endpoint == 'prescricoes' else '' }}" href="{{ url_for('farmacia') }}">
+                    <i class="fas fa-prescription"></i> Prescrições
+                </a>
+            </li>
+            {% endif %}
+            
+            {% if current_user.role in ['admin', 'medico', 'farmaceutico', 'enfermeiro'] %}
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if request.endpoint == 'relatorios' else '' }}" href="{{ url_for('relatorios') }}">
+                    <i class="fas fa-chart-bar"></i> Relatórios
+                </a>
+            </li>
+            {% endif %}
+            
+            {% if current_user.role in ['admin', 'medico', 'farmaceutico'] %}
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if request.endpoint == 'receituarios' else '' }}" href="{{ url_for('receituarios') }}">
+                    <i class="fas fa-file-medical-alt"></i> Receituários
+                </a>
+            </li>
+            {% endif %}
+            
+            {% if current_user.role == 'admin' %}
+            <li class="nav-item">
+                <a class="nav-link {{ 'active' if request.endpoint == 'usuarios' else '' }}" href="{{ url_for('usuarios') }}">
+                    <i class="fas fa-users-cog"></i> Usuários
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+        
+        <div class="user-info">
+            <div class="user-avatar">
+                <i class="fas fa-user"></i>
+            </div>
+            <div>
+                <div class="user-name">{{ current_user.nome }}</div>
+                <div class="user-role">{{ current_user.role|capitalize }}</div>
+            </div>
+            <a href="{{ url_for('logout') }}" class="ms-auto text-white">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Main Content -->
+    <div class="{% if current_user.is_authenticated %}main-content{% endif %}">
+        {% if current_user.is_authenticated %}
+        <header class="content-header">
+            <h1 class="header-title">Bem-vindo, {{ current_user.nome }}</h1>
+            
+            <div class="header-actions">
+                <a href="{{ url_for('mensagens') }}" class="header-button">
+                    <i class="fas fa-envelope"></i>
+                    {% if unread_messages is defined and unread_messages > 0 %}
+                        <span class="notification-badge">{{ unread_messages }}</span>
+                    {% endif %}
+                </a>
+                <button class="header-button" type="button" id="chatToggleHeader">
+                    <i class="fas fa-comment-alt"></i>
+                </button>
+            </div>
+        </header>
+        {% endif %}
+        
+        <div class="content-body">
+            <!-- Flash Messages -->
+            {% include 'partials/alerts.html' %}
+            
+            <!-- Page Content -->
+            {% block content %}{% endblock %}
+        </div>
+        
+        <!-- Footer -->
+        <footer>
+            <div class="text-center">
+                Projeto de intervenção Turma 1 Medicina UNA - Tucuruí
+            </div>
+        </footer>
+    </div>
+    
+    {% if current_user.is_authenticated %}
+    <!-- Chat Widget -->
+    <div class="chat-toggle" id="chatToggle"></div>
+    
+    <div class="chat-container" id="chatContainer">
+        <div class="chat-header">
+            <h5><i class="fas fa-comments"></i> Bate-papo Rápido</h5>
+            <button class="btn-close btn-close-white" id="chatClose"></button>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <!-- As mensagens serão carregadas via API -->
+        </div>
+        <div class="chat-input">
+            <input type="text" placeholder="Digite sua mensagem..." id="chatInput">
+            <button id="chatSend"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Bootstrap JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Vue.js -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+
+    <!-- Flatpickr para seleção de datas -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/pt.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/vue-components.js') }}"></script>
+    
+    <!-- Inicializar seletores de data -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Configurar inputs de tipo date para datas futuras (validades, etc)
+        flatpickr("input[type=date].future-date", {
+            locale: "pt",
+            dateFormat: "Y-m-d",
+            altInput: true,
+            altFormat: "d/m/Y",
+            minDate: new Date().setDate(new Date().getDate() - 1), // Permite hoje e datas futuras
+            disableMobile: true
+        });
+        
+        // Configurar inputs de data de nascimento para permitir qualquer data passada
+        flatpickr("input[type=date]#data_nascimento, input[type=date].birth-date", {
+            locale: "pt",
+            dateFormat: "Y-m-d",
+            altInput: true,
+            altFormat: "d/m/Y",
+            maxDate: new Date(), // Permite apenas datas até hoje (não futuras)
+            disableMobile: true
+        });
+        
+        // Configurar todos os outros inputs de tipo date sem restrições específicas
+        flatpickr("input[type=date]:not(.future-date):not(#data_nascimento):not(.birth-date)", {
+            locale: "pt",
+            dateFormat: "Y-m-d",
+            altInput: true,
+            altFormat: "d/m/Y",
+            disableMobile: true
+        });
+    });
+    
+    // Função para confirmar exclusão de itens
+    function confirmarExclusao(url) {
+        if (confirm('Tem certeza que deseja excluir este item? Esta ação não pode ser desfeita.')) {
+            window.location.href = url;
+        }
+    }
+    </script>
+    
+    <!-- Chat Script -->
+    {% if current_user.is_authenticated %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatToggle = document.getElementById('chatToggle');
+            const chatContainer = document.getElementById('chatContainer');
+            const chatClose = document.getElementById('chatClose');
+            const chatInput = document.getElementById('chatInput');
+            const chatSend = document.getElementById('chatSend');
+            const chatMessages = document.getElementById('chatMessages');
+            
+            // Carregar mensagens comuns a todos (últimas 50 mensagens)
+            let mensagens = [];
+            
+            // Função para carregar mensagens do histórico global
+            function carregarMensagensGlobais() {
+                // Remover todas as mensagens atuais
+                chatMessages.innerHTML = `
+                    <div class="chat-message system">
+                        <div class="mensagem-texto">Bate-papo rápido da equipe UBS</div>
+                        <div class="mensagem-info small text-muted">Sistema</div>
+                    </div>
+                `;
+                
+                // Fazer uma requisição para obter mensagens globais (mock simples por enquanto)
+                // Em uma implementação real, isso seria uma chamada AJAX para um endpoint que busca mensagens
+                // Similar ao sistema de mensagens real
+                fetch('/api/chat-rapido/mensagens')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data && data.mensagens) {
+                            mensagens = data.mensagens;
+                            
+                            // Mostrar as mensagens
+                            mensagens.forEach(msg => {
+                                const messageEl = document.createElement('div');
+                                const isCurrentUser = msg.usuario_id == {{ current_user.id }};
+                                messageEl.className = isCurrentUser ? 'chat-message sent' : 'chat-message received';
+                                messageEl.setAttribute('data-message-id', msg.id);
+                                
+                                let messageControls = '';
+                                if (isCurrentUser) {
+                                    messageControls = `
+                                        <span class="message-controls">
+                                            <button class="btn-edit-message" onclick="editMessage(${msg.id})" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn-delete-message" onclick="deleteMessage(${msg.id})" title="Excluir">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </span>
+                                    `;
+                                }
+                                
+                                messageEl.innerHTML = `
+                                    <div class="mensagem-texto">${msg.texto}</div>
+                                    <div class="mensagem-info small text-muted">
+                                        ${isCurrentUser ? 'Você' : msg.nome_usuario} • ${msg.hora_formatada}
+                                        ${messageControls}
+                                    </div>
+                                `;
+                                chatMessages.appendChild(messageEl);
+                            });
+                            
+                            // Rolar para o final
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erro ao carregar mensagens do chat:', error);
+                        const errorMsg = document.createElement('div');
+                        errorMsg.className = 'chat-message system';
+                        errorMsg.innerHTML = `
+                            <div class="mensagem-texto">Erro ao carregar mensagens. Tente novamente mais tarde.</div>
+                            <div class="mensagem-info small text-muted">Sistema</div>
+                        `;
+                        chatMessages.appendChild(errorMsg);
+                    });
+            }
+            
+            // Nome e função do usuário atual
+            const nomeUsuario = "{{ current_user.nome }}";
+            const funcaoUsuario = "{{ current_user.role }}";
+            
+            // Toggle chat
+            chatToggle.addEventListener('click', function() {
+                chatContainer.classList.toggle('active');
+                chatToggle.classList.toggle('active');
+                
+                if (chatContainer.classList.contains('active')) {
+                    // Carrega mensagens quando abre o chat
+                    carregarMensagensGlobais();
+                }
+            });
+            
+            // Close chat
+            chatClose.addEventListener('click', function() {
+                chatContainer.classList.remove('active');
+                chatToggle.classList.remove('active');
+            });
+            
+            // Obter hora formatada
+            function getHoraFormatada() {
+                const agora = new Date();
+                return agora.getHours().toString().padStart(2, '0') + ':' + 
+                       agora.getMinutes().toString().padStart(2, '0');
+            }
+            
+            // Send message
+            function sendMessage() {
+                const message = chatInput.value.trim();
+                if (message) {
+                    // Obter timestamp
+                    const timestamp = getHoraFormatada();
+                    
+                    // Em uma implementação real, isso seria um POST para o servidor
+                    fetch('/api/chat-rapido/enviar', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            texto: message,
+                            usuario_id: {{ current_user.id }},
+                            nome_usuario: nomeUsuario
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Adicionar mensagem ao chat localmente
+                            const messageEl = document.createElement('div');
+                            messageEl.className = 'chat-message sent';
+                            messageEl.setAttribute('data-message-id', data.mensagem.id);
+                            messageEl.innerHTML = `
+                                <div class="mensagem-texto">${message}</div>
+                                <div class="mensagem-info small text-muted">
+                                    Você • ${timestamp}
+                                    <span class="message-controls">
+                                        <button class="btn-edit-message" onclick="editMessage(${data.mensagem.id})" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn-delete-message" onclick="deleteMessage(${data.mensagem.id})" title="Excluir">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </span>
+                                </div>
+                            `;
+                            chatMessages.appendChild(messageEl);
+                            
+                            // Clear input
+                            chatInput.value = '';
+                            
+                            // Scroll to bottom
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        } else {
+                            alert('Erro ao enviar mensagem: ' + (data.message || 'Erro desconhecido'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erro ao enviar mensagem:', error);
+                        alert('Erro ao enviar mensagem. Tente novamente mais tarde.');
+                    });
+                }
+            }
+            
+            chatSend.addEventListener('click', sendMessage);
+            
+            chatInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+            
+            // Verificar por novas mensagens a cada 10 segundos
+            setInterval(function() {
+                if (chatContainer.classList.contains('active')) {
+                    carregarMensagensGlobais();
+                }
+            }, 10000);
+            
+            // Funções globais para editar e excluir mensagens
+            window.editMessage = function(messageId) {
+                // Encontrar a mensagem pelo ID
+                const messageElement = document.querySelector(`.chat-message[data-message-id="${messageId}"]`);
+                if (!messageElement) return;
+                
+                // Já está em modo de edição
+                if (messageElement.classList.contains('editing')) return;
+                
+                // Obter o texto atual
+                const messageText = messageElement.querySelector('.mensagem-texto').textContent;
+                
+                // Adicionar classe de edição
+                messageElement.classList.add('editing');
+                
+                // Criar formulário de edição
+                const textContainer = messageElement.querySelector('.mensagem-texto');
+                const originalContent = textContainer.innerHTML;
+                
+                textContainer.innerHTML = `
+                    <div class="edit-message-form">
+                        <textarea class="edit-message-textarea">${messageText}</textarea>
+                        <div class="edit-message-actions">
+                            <button class="btn-cancel-edit" onclick="cancelEdit(${messageId}, '${originalContent.replace(/'/g, "\\'")}')">Cancelar</button>
+                            <button class="btn-save-edit" onclick="saveEdit(${messageId})">Salvar</button>
+                        </div>
+                    </div>
+                `;
+            };
+            
+            window.cancelEdit = function(messageId, originalContent) {
+                const messageElement = document.querySelector(`.chat-message[data-message-id="${messageId}"]`);
+                if (!messageElement) return;
+                
+                // Restaurar conteúdo original
+                messageElement.querySelector('.mensagem-texto').innerHTML = originalContent;
+                
+                // Remover classe de edição
+                messageElement.classList.remove('editing');
+            };
+            
+            window.saveEdit = function(messageId) {
+                const messageElement = document.querySelector(`.chat-message[data-message-id="${messageId}"]`);
+                if (!messageElement) return;
+                
+                // Obter o novo texto
+                const textarea = messageElement.querySelector('.edit-message-textarea');
+                const newText = textarea.value.trim();
+                
+                if (!newText) {
+                    alert('O texto da mensagem não pode estar vazio.');
+                    return;
+                }
+                
+                // Enviar requisição para atualizar no servidor
+                fetch(`/api/chat-rapido/editar/${messageId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        texto: newText
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Atualizar a mensagem na interface
+                        messageElement.querySelector('.mensagem-texto').innerHTML = newText;
+                        
+                        // Remover classe de edição
+                        messageElement.classList.remove('editing');
+                    } else {
+                        alert('Erro ao editar mensagem: ' + (data.message || 'Erro desconhecido'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao editar mensagem:', error);
+                    alert('Erro ao editar mensagem. Tente novamente mais tarde.');
+                });
+            };
+            
+            window.deleteMessage = function(messageId) {
+                if (!confirm('Tem certeza que deseja excluir esta mensagem?')) {
+                    return;
+                }
+                
+                // Enviar requisição para excluir no servidor
+                fetch(`/api/chat-rapido/excluir/${messageId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Remover mensagem da interface
+                        const messageElement = document.querySelector(`.chat-message[data-message-id="${messageId}"]`);
+                        if (messageElement) {
+                            messageElement.remove();
+                        }
+                    } else {
+                        alert('Erro ao excluir mensagem: ' + (data.message || 'Erro desconhecido'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao excluir mensagem:', error);
+                    alert('Erro ao excluir mensagem. Tente novamente mais tarde.');
+                });
+            };
+        });
+    </script>
+    {% endif %}
+    
+    <!-- Integração do botão de chat no cabeçalho -->
+    {% if current_user.is_authenticated %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Integrar botão de chat no cabeçalho
+            const chatToggleHeader = document.getElementById('chatToggleHeader');
+            if (chatToggleHeader) {
+                chatToggleHeader.addEventListener('click', function() {
+                    // Abre o chat quando clicado
+                    const chatToggle = document.getElementById('chatToggle');
+                    const chatContainer = document.getElementById('chatContainer');
+                    
+                    chatContainer.classList.add('active');
+                    chatToggle.classList.add('active');
+                    
+                    // Carrega mensagens se tiver essa função
+                    if (typeof carregarMensagensGlobais === 'function') {
+                        carregarMensagensGlobais();
+                    }
+                });
+            }
+        });
+    </script>
+    {% endif %}
+    
+    <!-- Additional Scripts -->
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

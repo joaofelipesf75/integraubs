@@ -1,0 +1,623 @@
+{% extends 'base.html' %}
+
+{% block title %}Estoque de Medicamentos - Integra UBS{% endblock %}
+
+{% block content %}
+<style>
+    /* Estilos para a pesquisa de medicamentos */
+    .search-box {
+        position: relative;
+        margin-bottom: 20px;
+    }
+    
+    .search-results {
+        display: none;
+        position: absolute;
+        width: 100%;
+        max-height: 350px;
+        overflow-y: auto;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        z-index: 1000;
+    }
+    
+    .search-results.active {
+        display: block;
+    }
+    
+    .search-item {
+        padding: 10px 15px;
+        border-bottom: 1px solid #eee;
+        cursor: default;
+    }
+    
+    .search-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .search-item-title {
+        font-weight: bold;
+        margin-bottom: 2px;
+    }
+    
+    .search-item-description {
+        font-size: 0.9em;
+        color: #666;
+        margin-bottom: 2px;
+    }
+    
+    .search-item-details {
+        font-size: 0.85em;
+        color: #888;
+    }
+    
+    .search-type-badge {
+        display: inline-block;
+        padding: 2px 6px;
+        font-size: 0.75em;
+        border-radius: 3px;
+        margin-right: 5px;
+        color: white;
+    }
+    
+    .search-type-medication {
+        background-color: #28a745;
+    }
+    
+    .search-loading {
+        padding: 15px;
+        text-align: center;
+        color: #666;
+    }
+    
+    .search-error {
+        padding: 15px;
+        text-align: center;
+        color: #dc3545;
+    }
+    
+    .search-no-results {
+        padding: 15px;
+        text-align: center;
+        color: #666;
+        font-style: italic;
+    }
+</style>
+<div class="medicamentos-page">
+    <div class="page-header">
+        <h2>Estoque de Medicamentos</h2>
+        
+        <!-- Barra de Pesquisa Inteligente -->
+        <div class="search-container">
+            <div class="search-wrapper">
+                <input type="text" id="medicationSearch" class="search-input" placeholder="Pesquisar medicamentos..." autocomplete="off">
+                <button type="button" class="search-button" id="medicationSearchButton">
+                    <i class="fas fa-search"></i>
+                </button>
+                
+                <div class="search-results" id="medicationSearchResults">
+                    <div class="search-results-inner">
+                        <div class="search-category">
+                            <h3>Medicamentos</h3>
+                            <div class="search-items" id="medicationResultsItems"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="page-actions">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newMedicationModal">
+                <i class="fas fa-plus"></i> Novo Medicamento
+            </button>
+        </div>
+    </div>
+    
+    <div class="page-card">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Princípio Ativo</th>
+                        <th>Forma</th>
+                        <th>Concentração</th>
+                        <th>Estoque Total</th>
+                        <th>Próxima Validade</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for medication in medications %}
+                    <tr>
+                        <td>{{ medication.id }}</td>
+                        <td>{{ medication.nome }}</td>
+                        <td>{{ medication.principio_ativo or '-' }}</td>
+                        <td>{{ medication.forma or '-' }}</td>
+                        <td>{{ medication.concentracao or '-' }}</td>
+                        <td>
+                            {% if medication_data and medication.id in medication_data %}
+                                {% set stock = medication_data[medication.id]['stock'] %}
+                            {% else %}
+                                {% set stock = 0 %}
+                            {% endif %}
+                            <span class="badge {{ 'bg-success' if stock > 20 else 'bg-warning' if stock > 10 else 'bg-danger' }}">
+                                {{ stock }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if medication_data and medication.id in medication_data and medication_data[medication.id]['expiry'] %}
+                                {% set next_expiry = medication_data[medication.id]['expiry'] %}
+                                <span class="badge {{ 'bg-danger' if (next_expiry - now.date()).days < 30 else 'bg-warning' if (next_expiry - now.date()).days < 90 else 'bg-success' }}">
+                                    {{ next_expiry.strftime('%d/%m/%Y') }}
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">Não disponível</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-sm btn-primary" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#editMedicationModal{{ medication.id }}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <a href="{{ url_for('medicamento_lotes', medication_id=medication.id) }}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-boxes"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-warning" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#adjustStockModal{{ medication.id }}">
+                                    <i class="fas fa-balance-scale"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-danger" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#deleteMedicationModal{{ medication.id }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center">Nenhum medicamento encontrado</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para adicionar novo medicamento -->
+<div class="modal fade" id="newMedicationModal" tabindex="-1" aria-labelledby="newMedicationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newMedicationModalLabel">Novo Medicamento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form action="{{ url_for('novo_medicamento') }}" method="POST">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Informações do Medicamento</h6>
+                            <div class="mb-3">
+                                <label for="nome" class="form-label">Nome</label>
+                                <input type="text" class="form-control" id="nome" name="nome" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="principio_ativo" class="form-label">Princípio Ativo</label>
+                                <input type="text" class="form-control" id="principio_ativo" name="principio_ativo">
+                            </div>
+                            <div class="mb-3">
+                                <label for="forma" class="form-label">Forma Farmacêutica</label>
+                                <select class="form-select" id="forma" name="forma">
+                                    <option value="">Selecione</option>
+                                    <option value="Comprimido">Comprimido</option>
+                                    <option value="Cápsula">Cápsula</option>
+                                    <option value="Solução oral">Solução oral</option>
+                                    <option value="Suspensão oral">Suspensão oral</option>
+                                    <option value="Xarope">Xarope</option>
+                                    <option value="Injetável">Injetável</option>
+                                    <option value="Pomada">Pomada</option>
+                                    <option value="Creme">Creme</option>
+                                    <option value="Gel">Gel</option>
+                                    <option value="Spray">Spray</option>
+                                    <option value="Pacote">Pacote</option>
+                                    <option value="Frasco">Frasco</option>
+                                    <option value="Litro">Litro</option>
+                                    <option value="Unidade">Unidade</option>
+                                    <option value="Beg">Beg</option>
+                                    <option value="Ampola">Ampola</option>
+                                    <option value="Outro">Outro</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="concentracao" class="form-label">Concentração</label>
+                                <input type="text" class="form-control" id="concentracao" name="concentracao" placeholder="Ex: 500mg, 50mg/ml">
+                            </div>
+                            <div class="mb-3">
+                                <label for="descricao" class="form-label">Descrição</label>
+                                <textarea class="form-control" id="descricao" name="descricao" rows="3"></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Informações do Lote</h6>
+                            <div class="mb-3">
+                                <label for="lote" class="form-label">Número do Lote</label>
+                                <input type="text" class="form-control" id="lote" name="lote" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="validade" class="form-label">Data de Validade</label>
+                                <input type="date" class="form-control" id="validade" name="validade" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="quantidade" class="form-label">Quantidade</label>
+                                <input type="number" class="form-control" id="quantidade" name="quantidade" min="1" required>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modais para editar medicamentos -->
+{% for medication in medications %}
+<!-- Modal de Edição -->
+<div class="modal fade" id="editMedicationModal{{ medication.id }}" tabindex="-1" aria-labelledby="editMedicationModalLabel{{ medication.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editMedicationModalLabel{{ medication.id }}">Editar Medicamento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form action="{{ url_for('editar_medicamento', id=medication.id) }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="nome{{ medication.id }}" class="form-label">Nome</label>
+                        <input type="text" class="form-control" id="nome{{ medication.id }}" name="nome" value="{{ medication.nome }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="principio_ativo{{ medication.id }}" class="form-label">Princípio Ativo</label>
+                        <input type="text" class="form-control" id="principio_ativo{{ medication.id }}" name="principio_ativo" value="{{ medication.principio_ativo or '' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="forma{{ medication.id }}" class="form-label">Forma Farmacêutica</label>
+                        <select class="form-select" id="forma{{ medication.id }}" name="forma">
+                            <option value="">Selecione</option>
+                            <option value="Comprimido" {{ 'selected' if medication.forma == 'Comprimido' else '' }}>Comprimido</option>
+                            <option value="Cápsula" {{ 'selected' if medication.forma == 'Cápsula' else '' }}>Cápsula</option>
+                            <option value="Solução oral" {{ 'selected' if medication.forma == 'Solução oral' else '' }}>Solução oral</option>
+                            <option value="Suspensão oral" {{ 'selected' if medication.forma == 'Suspensão oral' else '' }}>Suspensão oral</option>
+                            <option value="Xarope" {{ 'selected' if medication.forma == 'Xarope' else '' }}>Xarope</option>
+                            <option value="Injetável" {{ 'selected' if medication.forma == 'Injetável' else '' }}>Injetável</option>
+                            <option value="Pomada" {{ 'selected' if medication.forma == 'Pomada' else '' }}>Pomada</option>
+                            <option value="Creme" {{ 'selected' if medication.forma == 'Creme' else '' }}>Creme</option>
+                            <option value="Gel" {{ 'selected' if medication.forma == 'Gel' else '' }}>Gel</option>
+                            <option value="Spray" {{ 'selected' if medication.forma == 'Spray' else '' }}>Spray</option>
+                            <option value="Outro" {{ 'selected' if medication.forma == 'Outro' else '' }}>Outro</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="concentracao{{ medication.id }}" class="form-label">Concentração</label>
+                        <input type="text" class="form-control" id="concentracao{{ medication.id }}" name="concentracao" value="{{ medication.concentracao or '' }}" placeholder="Ex: 500mg, 50mg/ml">
+                    </div>
+                    <div class="mb-3">
+                        <label for="descricao{{ medication.id }}" class="form-label">Descrição</label>
+                        <textarea class="form-control" id="descricao{{ medication.id }}" name="descricao" rows="3">{{ medication.descricao or '' }}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- Modal de Exclusão -->
+<div class="modal fade" id="deleteMedicationModal{{ medication.id }}" tabindex="-1" aria-labelledby="deleteMedicationModalLabel{{ medication.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteMedicationModalLabel{{ medication.id }}">Confirmar Exclusão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja excluir o medicamento <strong>{{ medication.nome }}</strong>?</p>
+                <p class="text-danger">Esta ação não pode ser desfeita e removerá todos os lotes associados.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form action="{{ url_for('excluir_medicamento', id=medication.id) }}" method="POST" style="display:inline;">
+                    <button type="submit" class="btn btn-danger">Confirmar Exclusão</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Ajustar Estoque -->
+<div class="modal fade" id="adjustStockModal{{ medication.id }}" tabindex="-1" aria-labelledby="adjustStockModalLabel{{ medication.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="adjustStockModalLabel{{ medication.id }}">Ajustar Estoque - {{ medication.nome }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form action="{{ url_for('ajustar_estoque_medicamento', id=medication.id) }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="operacao{{ medication.id }}" class="form-label">Operação</label>
+                        <select class="form-select" id="operacao{{ medication.id }}" name="operacao" required>
+                            <option value="">Selecione</option>
+                            <option value="adicionar">Adicionar ao estoque</option>
+                            <option value="remover">Remover do estoque</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="lote{{ medication.id }}" class="form-label">Lote</label>
+                        <select class="form-select" id="lote{{ medication.id }}" name="lote">
+                            <option value="">Novo lote</option>
+                            {% for batch in medication.batches %}
+                            <option value="{{ batch.id }}">{{ batch.lote }} - Validade: {{ batch.validade.strftime('%d/%m/%Y') }} - Estoque: {{ batch.quantidade_atual }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div id="novoLoteCampos{{ medication.id }}" style="display: none;">
+                        <div class="mb-3">
+                            <label for="novo_lote{{ medication.id }}" class="form-label">Número do Lote</label>
+                            <input type="text" class="form-control" id="novo_lote{{ medication.id }}" name="novo_lote">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="validade{{ medication.id }}" class="form-label">Validade</label>
+                            <input type="date" class="form-control" id="validade{{ medication.id }}" name="validade">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="quantidade{{ medication.id }}" class="form-label">Quantidade</label>
+                        <input type="number" class="form-control" id="quantidade{{ medication.id }}" name="quantidade" min="1" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="observacoes{{ medication.id }}" class="form-label">Observações</label>
+                        <textarea class="form-control" id="observacoes{{ medication.id }}" name="observacoes" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Ajuste</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Função para os ajustes de estoque e modais
+(function() {
+    document.addEventListener('DOMContentLoaded', function() {
+        // Para cada medicamento, configure o evento de mudança da operação
+        {% for medication in medications %}
+        const operacaoSelect{{ medication.id }} = document.getElementById('operacao{{ medication.id }}');
+        const loteSelect{{ medication.id }} = document.getElementById('lote{{ medication.id }}');
+        const novoLoteCampos{{ medication.id }} = document.getElementById('novoLoteCampos{{ medication.id }}');
+        
+        if (operacaoSelect{{ medication.id }}) {
+            // Função para atualizar a visibilidade dos campos
+            function updateFields{{ medication.id }}() {
+                const operacao = operacaoSelect{{ medication.id }}.value;
+                
+                // Mostrar campos de lote apenas para operação 'adicionar'
+                if (operacao === 'adicionar') {
+                    loteSelect{{ medication.id }}.parentElement.style.display = 'block';
+                    
+                    // Mostrar campos de novo lote apenas se selecionou 'Novo lote'
+                    if (loteSelect{{ medication.id }}.value === '') {
+                        novoLoteCampos{{ medication.id }}.style.display = 'block';
+                    } else {
+                        novoLoteCampos{{ medication.id }}.style.display = 'none';
+                    }
+                } else {
+                    loteSelect{{ medication.id }}.parentElement.style.display = 'none';
+                    novoLoteCampos{{ medication.id }}.style.display = 'none';
+                }
+            }
+            
+            // Escutar mudanças na operação
+            operacaoSelect{{ medication.id }}.addEventListener('change', updateFields{{ medication.id }});
+            
+            // Escutar mudanças no lote
+            loteSelect{{ medication.id }}.addEventListener('change', function() {
+                if (operacaoSelect{{ medication.id }}.value === 'adicionar') {
+                    if (this.value === '') {
+                        novoLoteCampos{{ medication.id }}.style.display = 'block';
+                    } else {
+                        novoLoteCampos{{ medication.id }}.style.display = 'none';
+                    }
+                }
+            });
+            
+            // Executar na inicialização
+            updateFields{{ medication.id }}();
+        }
+        {% endfor %}
+    });
+})();
+
+// Código para a funcionalidade de pesquisa
+(function() {
+    document.addEventListener('DOMContentLoaded', function() {
+        // Elementos da pesquisa
+        const searchInput = document.getElementById('medicationSearch');
+        const searchResults = document.getElementById('medicationSearchResults');
+        const medicationResultsItems = document.getElementById('medicationResultsItems');
+        
+        if (!searchInput || !searchResults || !medicationResultsItems) {
+            console.error("Elementos de pesquisa não encontrados");
+            return;
+        }
+        
+        // Tempo de espera para debounce
+        let searchTimeout = null;
+        
+        // Ouvir eventos de digitação
+        searchInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            
+            // Limpar timeout anterior
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            
+            // Esconder resultados se a consulta for muito curta
+            if (query.length < 2) {
+                searchResults.classList.remove('active');
+                return;
+            }
+            
+            // Debounce para evitar muitas requisições
+            searchTimeout = setTimeout(() => {
+                performSearch(query);
+            }, 300);
+        });
+        
+        // Variável para controlar requisições em andamento
+        let currentSearchRequest = null;
+        
+        // Função para realizar a pesquisa via API
+        function performSearch(query) {
+            // Mostrar indicador de carregamento
+            medicationResultsItems.innerHTML = '<div class="search-loading">Pesquisando...</div>';
+            searchResults.classList.add('active');
+            
+            // Cancelar requisição anterior se existir
+            if (currentSearchRequest) {
+                currentSearchRequest.abort();
+            }
+            
+            // Criar nova requisição
+            currentSearchRequest = new AbortController();
+            const signal = currentSearchRequest.signal;
+            
+            // Otimizar a URL para reduzir tamanho da requisição
+            const url = `/api/search?q=${encodeURIComponent(query)}&type=medication&limit=10`;
+            
+            // Executar fetch com timeout e tratamento de erros melhorado
+            const timeoutId = setTimeout(() => currentSearchRequest.abort(), 5000); // 5 segundos timeout
+            
+            fetch(url, { signal })
+                .then(response => {
+                    clearTimeout(timeoutId);
+                    if (!response.ok) {
+                        throw new Error('Falha na resposta do servidor');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        displaySearchResults(data.results.medications);
+                    } else {
+                        throw new Error('Formato de resposta inválido');
+                    }
+                })
+                .catch(error => {
+                    // Não mostrar erro de abort (quando usuário cancela)
+                    if (error.name === 'AbortError') {
+                        return;
+                    }
+                    
+                    console.error('Erro na pesquisa:', error);
+                    medicationResultsItems.innerHTML = 
+                        '<div class="search-error">Erro ao realizar pesquisa. Tente novamente.</div>';
+                })
+                .finally(() => {
+                    // Limpar a requisição atual
+                    currentSearchRequest = null;
+                });
+        }
+        
+        // Função para exibir resultados
+        function displaySearchResults(medications) {
+            // Limpar resultados anteriores
+            medicationResultsItems.innerHTML = '';
+            
+            // Adicionar novos resultados
+            if (medications && medications.length > 0) {
+                medications.forEach(med => {
+                    const item = createSearchResultItem(med);
+                    medicationResultsItems.appendChild(item);
+                });
+                searchResults.classList.add('active');
+            } else {
+                // Mostrar mensagem de nenhum resultado
+                medicationResultsItems.innerHTML = '<div class="search-no-results">Nenhum medicamento encontrado</div>';
+                searchResults.classList.add('active');
+            }
+        }
+        
+        // Criar item de resultado de pesquisa (não clicável)
+        function createSearchResultItem(item) {
+            const div = document.createElement('div');
+            div.className = 'search-item';
+            
+            div.innerHTML = `
+                <div class="search-item-title">
+                    <span class="search-type-badge search-type-medication">Medicamento</span>
+                    ${item.texto}
+                </div>
+                <div class="search-item-description">${item.descricao}</div>
+                <div class="search-item-details">${item.detalhe}</div>
+            `;
+            
+            return div;
+        }
+        
+        // Fechar resultados quando clicar fora
+        document.addEventListener('click', function(event) {
+            if (!searchInput.contains(event.target) && !searchResults.contains(event.target)) {
+                searchResults.classList.remove('active');
+            }
+        });
+        
+        // Tratar clique no botão de pesquisa
+        const searchButton = document.getElementById('medicationSearchButton');
+        if (searchButton) {
+            searchButton.addEventListener('click', () => {
+                const query = searchInput.value.trim();
+                if (query.length >= 2) {
+                    performSearch(query);
+                }
+            });
+        }
+        
+        // Tratar tecla Enter no campo de pesquisa
+        searchInput.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                const query = this.value.trim();
+                if (query.length >= 2) {
+                    performSearch(query);
+                }
+            }
+        });
+    });
+})();
+</script>
+{% endblock %}

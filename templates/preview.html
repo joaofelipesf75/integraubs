@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preview Dashboard - Integra UBS</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome for icons - via Kit URL -->
+    <script src="https://kit.fontawesome.com/54b9f8adc3.js" crossorigin="anonymous"></script>
+    
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        
+        .icone-estatistica, .icone-atividade {
+            width: 40px;
+            height: 40px;
+            min-width: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .bg-purple {
+            background-color: #6f42c1;
+        }
+        
+        .card-estatistica {
+            padding: 15px;
+            height: 100%;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .card {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+            border: none;
+        }
+        
+        .card-header {
+            border-bottom: 1px solid rgba(0,0,0,.125);
+            padding: 15px 20px;
+            background-color: white;
+        }
+        
+        .chat-area {
+            height: 300px;
+            overflow-y: auto;
+        }
+        
+        .mensagem-enviada, .mensagem-recebida {
+            position: relative;
+            max-width: 75%;
+            margin-bottom: 10px;
+            padding: 10px 15px;
+            border-radius: 10px;
+        }
+        
+        .mensagem-enviada {
+            background-color: #0d6efd;
+            color: white;
+        }
+        
+        .mensagem-recebida {
+            background-color: white;
+            color: #212529;
+        }
+        
+        .acoes-mensagem {
+            z-index: 10;
+            background-color: white;
+            border-radius: 5px;
+            padding: 5px;
+            position: absolute;
+            top: 0;
+            right: 0;
+        }
+        
+        .tempo-mensagem {
+            font-size: 0.75rem;
+            text-align: right;
+            margin-top: 5px;
+        }
+        
+        h1, h2, h3, h4, h5 {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid p-4">
+        <div class="d-flex align-items-center mb-4">
+            <svg width="30" height="30" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" class="me-2">
+                <circle cx="50" cy="50" r="45" fill="#0066cc" />
+                <path d="M30 50 L70 50 M50 30 L50 70" stroke="white" stroke-width="8" stroke-linecap="round" />
+            </svg>
+            <h2 class="m-0">Integra UBS | Preview do Dashboard</h2>
+        </div>
+        
+        <div class="container-fluid px-0 py-3">
+            <!-- Cards de estatísticas no topo -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="card-estatistica bg-white rounded-3 shadow-sm d-flex align-items-center">
+                        <div class="icone-estatistica bg-primary rounded-circle text-white d-flex align-items-center justify-content-center me-3">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div>
+                            <div class="texto-estatistica text-muted small">Total de Pacientes</div>
+                            <div class="valor-estatistica fw-bold fs-4">{{ patients_count }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card-estatistica bg-white rounded-3 shadow-sm d-flex align-items-center">
+                        <div class="icone-estatistica bg-success rounded-circle text-white d-flex align-items-center justify-content-center me-3">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div>
+                            <div class="texto-estatistica text-muted small">Consultas Realizadas</div>
+                            <div class="valor-estatistica fw-bold fs-4">{{ consultas_realizadas }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card-estatistica bg-white rounded-3 shadow-sm d-flex align-items-center">
+                        <div class="icone-estatistica bg-purple rounded-circle text-white d-flex align-items-center justify-content-center me-3">
+                            <i class="fas fa-calendar-day"></i>
+                        </div>
+                        <div>
+                            <div class="texto-estatistica text-muted small">Consultas do Mês</div>
+                            <div class="valor-estatistica fw-bold fs-4">{{ consultas_mes }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card-estatistica bg-white rounded-3 shadow-sm d-flex align-items-center">
+                        <div class="icone-estatistica bg-danger rounded-circle text-white d-flex align-items-center justify-content-center me-3">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div>
+                            <div class="texto-estatistica text-muted small">Medicamentos Vencidos</div>
+                            <div class="valor-estatistica fw-bold fs-4">{{ medicamentos_vencidos }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Conteúdo principal: atividades recentes e chat -->
+            <div class="row g-4">
+                <!-- Atividades Recentes - Lado esquerdo -->
+                <div class="col-md-6">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-header bg-white">
+                            <h5 class="m-0">Atividades Recentes</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="lista-atividades">
+                                {% for atividade in atividades_recentes %}
+                                <div class="atividade d-flex align-items-start {% if not loop.last %}mb-3{% endif %}">
+                                    <div class="icone-atividade bg-{{ atividade.cor }} rounded-circle text-white d-flex align-items-center justify-content-center me-3">
+                                        <i class="fas fa-{{ atividade.icone }}"></i>
+                                    </div>
+                                    <div>
+                                        <div class="texto-atividade">{{ atividade.texto }}</div>
+                                        <div class="tempo-atividade text-muted small">{{ atividade.tempo }}</div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Chat - Lado direito -->
+                <div class="col-md-6">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-header bg-white border-bottom">
+                            <div class="form-check d-flex align-items-center">
+                                <input class="form-check-input me-2" type="checkbox" id="chatToggle" checked>
+                                <label class="form-check-label" for="chatToggle">Bate-Papo</label>
+                            </div>
+                        </div>
+                        <div class="card-body bg-light p-0 d-flex flex-column">
+                            <div class="chat-area p-3 flex-grow-1 overflow-auto" id="chatArea">
+                                <!-- Mensagem recebida (à esquerda) -->
+                                <div class="d-flex mb-3">
+                                    <div class="mensagem-recebida rounded px-3 py-2 text-dark bg-white shadow-sm">
+                                        <div class="conteudo-mensagem">Olá Dr. João, temos o medicamento para o paciente Silva?</div>
+                                        <div class="tempo-mensagem text-end text-muted small mt-1">09:30</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Mensagem enviada (à direita) -->
+                                <div class="d-flex justify-content-end mb-3">
+                                    <div class="mensagem-enviada rounded px-3 py-2 text-white bg-primary shadow-sm position-relative">
+                                        <div class="conteudo-mensagem">Sim, temos disponível. O paciente já está aguardando na recepção.</div>
+                                        <div class="tempo-mensagem text-end text-white-50 small mt-1">09:32</div>
+                                        <div class="acoes-mensagem d-none position-absolute top-0 end-0 bg-white rounded shadow-sm p-1">
+                                            <button class="btn btn-sm text-primary p-1 editar-mensagem"><i class="fas fa-edit"></i></button>
+                                            <button class="btn btn-sm text-danger p-1 excluir-mensagem"><i class="fas fa-trash"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Campo de entrada de mensagem -->
+                            <div class="chat-input bg-white p-2 d-flex align-items-center border-top">
+                                <input type="text" id="chatInput" class="form-control border-0 bg-light rounded-pill me-2" placeholder="Digite sua mensagem...">
+                                <button id="sendMessageBtn" class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Dashboard inicializado com sucesso');
+        
+        // Elementos do chat
+        const chatInput = document.getElementById('chatInput');
+        const sendMessageBtn = document.getElementById('sendMessageBtn');
+        const chatArea = document.getElementById('chatArea');
+        
+        // Mostrar ações quando passar o mouse sobre a mensagem enviada
+        document.querySelectorAll('.mensagem-enviada').forEach(msg => {
+            msg.addEventListener('mouseenter', function() {
+                this.querySelector('.acoes-mensagem').classList.remove('d-none');
+            });
+            
+            msg.addEventListener('mouseleave', function() {
+                this.querySelector('.acoes-mensagem').classList.add('d-none');
+            });
+        });
+        
+        // Função para obter hora atual formatada
+        function getFormattedTime() {
+            const now = new Date();
+            return now.getHours().toString().padStart(2, '0') + ':' + 
+                   now.getMinutes().toString().padStart(2, '0');
+        }
+        
+        // Função para enviar mensagem
+        function sendMessage() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+            
+            // Criar elemento de mensagem enviada
+            const msgContainer = document.createElement('div');
+            msgContainer.className = 'd-flex justify-content-end mb-3';
+            
+            msgContainer.innerHTML = `
+                <div class="mensagem-enviada rounded px-3 py-2 text-white bg-primary shadow-sm position-relative">
+                    <div class="conteudo-mensagem">${message}</div>
+                    <div class="tempo-mensagem text-end text-white-50 small mt-1">${getFormattedTime()}</div>
+                    <div class="acoes-mensagem d-none position-absolute top-0 end-0 bg-white rounded shadow-sm p-1">
+                        <button class="btn btn-sm text-primary p-1 editar-mensagem"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm text-danger p-1 excluir-mensagem"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            `;
+            
+            chatArea.appendChild(msgContainer);
+            
+            // Adicionar eventos aos botões de ação
+            const msgElement = msgContainer.querySelector('.mensagem-enviada');
+            msgElement.addEventListener('mouseenter', function() {
+                this.querySelector('.acoes-mensagem').classList.remove('d-none');
+            });
+            
+            msgElement.addEventListener('mouseleave', function() {
+                this.querySelector('.acoes-mensagem').classList.add('d-none');
+            });
+            
+            // Limpar input e rolar para o final
+            chatInput.value = '';
+            chatArea.scrollTop = chatArea.scrollHeight;
+            
+            // Simular resposta (em um app real, seria uma API call)
+            setTimeout(() => {
+                const responses = [
+                    "Obrigado pela informação!",
+                    "Perfeito, vou registrar no sistema.",
+                    "Ótimo, vou comunicar ao médico responsável.",
+                    "Entendido. Precisa de mais alguma coisa?"
+                ];
+                
+                const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                
+                const replyContainer = document.createElement('div');
+                replyContainer.className = 'd-flex mb-3';
+                
+                replyContainer.innerHTML = `
+                    <div class="mensagem-recebida rounded px-3 py-2 text-dark bg-white shadow-sm">
+                        <div class="conteudo-mensagem">${randomResponse}</div>
+                        <div class="tempo-mensagem text-end text-muted small mt-1">${getFormattedTime()}</div>
+                    </div>
+                `;
+                
+                chatArea.appendChild(replyContainer);
+                chatArea.scrollTop = chatArea.scrollHeight;
+            }, 1000);
+        }
+        
+        // Eventos para envio de mensagem
+        sendMessageBtn.addEventListener('click', sendMessage);
+        
+        chatInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    });
+    </script>
+</body>
+</html>

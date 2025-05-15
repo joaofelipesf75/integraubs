@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="refresh" content="0;url=/debug">
+    <title>Redirecionando para o Sistema Integra UBS</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+        .loader {
+            border: 16px solid #f3f3f3;
+            border-top: 16px solid #3498db;
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            animation: spin 2s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <h1>Sistema Integra UBS</h1>
+    <p>Redirecionando para o dashboard...</p>
+    <div class="loader"></div>
+    <p>Se não for redirecionado automaticamente, clique em um dos links abaixo:</p>
+    <ul style="list-style-type: none; padding: 0;">
+        <li><a href="/debug">Visualização Debug (Ultra-simplificada)</a></li>
+        <li><a href="/simple">Visualização Simples</a></li>
+        <li><a href="/preview">Visualização Completa</a></li>
+        <li><a href="/health">Verificar Status da API</a></li>
+    </ul>
+    <script>
+        // Verifica se o servidor está pronto antes de redirecionar
+        fetch('/health')
+            .then(response => {
+                if (response.ok) {
+                    window.location.href = '/debug';
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao verificar status do servidor:', error);
+                document.querySelector('p').textContent = 'Erro ao conectar ao servidor. Tente novamente em alguns instantes.';
+            });
+    </script>
+</body>
+</html>

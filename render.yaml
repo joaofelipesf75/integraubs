@@ -1,0 +1,25 @@
+services:
+  # Web service
+  - type: web
+    name: sistema-integra-ubs
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: bash ./start.sh
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sistema-integra-ubs-db
+          property: connectionString
+
+databases:
+  # PostgreSQL database
+  - name: sistema-integra-ubs-db
+    plan: starter
+    databaseName: sistema_integra_ubs
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: Permitir acesso de qualquer lugar (para desenvolvimento)

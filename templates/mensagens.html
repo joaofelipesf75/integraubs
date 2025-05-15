@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+
+{% block title %}Mensagens - Integra UBS{% endblock %}
+
+{% block content %}
+<div class="mensagens-page">
+    <div class="page-header">
+        <h2>Sistema de Mensagens</h2>
+        <div class="page-actions">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newMessageModal">
+                <i class="fas fa-envelope"></i> Nova Mensagem
+            </button>
+        </div>
+    </div>
+    
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="alert alert-info">
+                <h5><i class="fas fa-info-circle"></i> Como usar o sistema de mensagens:</h5>
+                <p>Este sistema permite troca de mensagens entre os profissionais da UBS.</p>
+                <ol>
+                    <li>Clique em <strong>"Nova Mensagem"</strong> para escrever para outro usuário</li>
+                    <li>Selecione o <strong>destinatário</strong> na lista de usuários do sistema</li>
+                    <li>As mensagens recebidas aparecem na aba <strong>"Recebidas"</strong></li>
+                    <li>As mensagens enviadas aparecem na aba <strong>"Enviadas"</strong></li>
+                    <li>Você pode <strong>editar</strong> ou <strong>excluir</strong> suas mensagens enviadas</li>
+                </ol>
+                <p class="mb-0"><strong>Dica:</strong> Faça login com diferentes usuários (medico/1234, enfermeiro/1234, etc.) para testar a troca de mensagens.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="page-card">
+                <ul class="nav nav-tabs" id="mensagensTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="recebidas-tab" data-bs-toggle="tab" data-bs-target="#recebidas" type="button" role="tab" aria-controls="recebidas" aria-selected="true">
+                            <i class="fas fa-inbox"></i> Recebidas
+                            {% if unread_messages > 0 %}
+                            <span class="badge bg-danger ms-1">{{ unread_messages }}</span>
+                            {% endif %}
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="enviadas-tab" data-bs-toggle="tab" data-bs-target="#enviadas" type="button" role="tab" aria-controls="enviadas" aria-selected="false">
+                            <i class="fas fa-paper-plane"></i> Enviadas
+                        </button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content p-3" id="mensagensTabContent">
+                    <div class="tab-pane fade show active" id="recebidas" role="tabpanel" aria-labelledby="recebidas-tab">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Status</th>
+                                        <th>Remetente</th>
+                                        <th>Assunto</th>
+                                        <th>Data</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for message in received %}
+                                    <tr>
+                                        <td>
+                                            <span class="badge {{ 'bg-success' if message.read else 'bg-info' }}">
+                                                {{ 'Lida' if message.read else 'Não lida' }}
+                                            </span>
+                                        </td>
+                                        <td>{{ message.sender.nome }}</td>
+                                        <td>{{ message.subject }}</td>
+                                        <td>{{ message.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                        <td>
+                                            <a href="{{ url_for('ler_mensagem', id=message.id) }}" class="btn btn-sm btn-info">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="5" class="text-center">Nenhuma mensagem recebida</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-pane fade" id="enviadas" role="tabpanel" aria-labelledby="enviadas-tab">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Destinatário</th>
+                                        <th>Assunto</th>
+                                        <th>Data</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for message in sent %}
+                                    <tr>
+                                        <td>{{ message.recipient.nome }}</td>
+                                        <td>{{ message.subject }}</td>
+                                        <td>{{ message.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <a href="{{ url_for('ler_mensagem', id=message.id) }}" class="btn btn-sm btn-info">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editMessageModal{{ message.id }}">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteMessageModal{{ message.id }}">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="4" class="text-center">Nenhuma mensagem enviada</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para nova mensagem -->
+<div class="modal fade" id="newMessageModal" tabindex="-1" aria-labelledby="newMessageModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newMessageModalLabel">Nova Mensagem</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form action="{{ url_for('enviar_mensagem') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="recipient_id" class="form-label">Destinatário</label>
+                        <select class="form-select" id="recipient_id" name="recipient_id" required>
+                            <option value="">Selecione um destinatário</option>
+                            {% for user in users %}
+                            <option value="{{ user.id }}">{{ user.nome }} ({{ user.role }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="subject" class="form-label">Assunto</label>
+                        <input type="text" class="form-control" id="subject" name="subject" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="body" class="form-label">Mensagem</label>
+                        <textarea class="form-control" id="body" name="body" rows="5" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Enviar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modais para editar mensagens -->
+{% for message in sent %}
+<div class="modal fade" id="editMessageModal{{ message.id }}" tabindex="-1" aria-labelledby="editMessageModalLabel{{ message.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editMessageModalLabel{{ message.id }}">Editar Mensagem</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form action="{{ url_for('editar_mensagem', id=message.id) }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="recipient{{ message.id }}" class="form-label">Destinatário</label>
+                        <input type="text" class="form-control" id="recipient{{ message.id }}" value="{{ message.recipient.nome }}" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="subject{{ message.id }}" class="form-label">Assunto</label>
+                        <input type="text" class="form-control" id="subject{{ message.id }}" name="subject" value="{{ message.subject }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="body{{ message.id }}" class="form-label">Mensagem</label>
+                        <textarea class="form-control" id="body{{ message.id }}" name="body" rows="5" required>{{ message.body }}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de exclusão -->
+<div class="modal fade" id="deleteMessageModal{{ message.id }}" tabindex="-1" aria-labelledby="deleteMessageModalLabel{{ message.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteMessageModalLabel{{ message.id }}">Confirmar Exclusão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja excluir a mensagem "{{ message.subject }}" enviada para {{ message.recipient.nome }}?</p>
+                <p class="text-danger">Esta ação não pode ser desfeita.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <a href="{{ url_for('excluir_mensagem', id=message.id) }}" class="btn btn-danger">Excluir</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

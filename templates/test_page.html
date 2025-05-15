@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}Página de Teste{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>Página de Teste</h1>
+    <p>Esta é uma página simples para testar se o JavaScript funciona corretamente.</p>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Teste de Botão</div>
+                <div class="card-body">
+                    <button id="testButton" class="btn btn-primary">Clique Aqui</button>
+                    <div id="testResult" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Usando IIFE para isolar o escopo
+(function() {
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM carregado na página de teste');
+        
+        // Obter elementos
+        const testButton = document.getElementById('testButton');
+        const testResult = document.getElementById('testResult');
+        
+        // Adicionar event listener ao botão
+        if (testButton) {
+            testButton.addEventListener('click', function() {
+                testResult.innerHTML = 'O botão foi clicado em: ' + new Date().toLocaleTimeString();
+            });
+        }
+    });
+})();
+</script>
+{% endblock %}

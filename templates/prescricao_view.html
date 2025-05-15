@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+
+{% block title %}Visualizar Prescrição - Integra UBS{% endblock %}
+
+{% block content %}
+<div class="prescricao-view-page">
+    <div class="page-header">
+        <div>
+            <h2>Prescrição Médica</h2>
+            <p class="mb-0">Prescrição #{{ prescription.id }}</p>
+        </div>
+        <div class="page-actions">
+            <a href="{{ url_for('farmacia') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </a>
+            
+            <!-- Botão para geração de receituário -->
+            <div class="btn-group">
+                <a href="{{ url_for('receituario_medico', prescription_id=prescription.id) }}" class="btn btn-info">
+                    <i class="fas fa-file-medical"></i> Gerar Receituário
+                </a>
+                <button type="button" class="btn btn-info dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="visually-hidden">Toggle Dropdown</span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{{ url_for('receituario_medico', prescription_id=prescription.id) }}">Modelo Padrão</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('selecionar_modelo_receituario', prescription_id=prescription.id) }}">Escolher Modelo...</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{{ url_for('receituarios') }}">Gerenciar Modelos</a></li>
+                </ul>
+            </div>
+            
+            {% if prescription.status == 'pendente' and current_user.role in ['admin', 'farmaceutico'] %}
+            <a href="{{ url_for('dispensar_medicamentos', prescription_id=prescription.id) }}" class="btn btn-primary">
+                <i class="fas fa-pills"></i> Dispensar Medicamentos
+            </a>
+            {% endif %}
+            
+            {% if current_user.role in ['admin', 'medico'] %}
+            <a href="{{ url_for('editar_prescricao', id=prescription.id) }}" class="btn btn-warning">
+                <i class="fas fa-edit"></i> Editar
+            </a>
+            <a href="#" onclick="confirmarExclusao('{{ url_for('excluir_prescricao', id=prescription.id) }}')" class="btn btn-danger">
+                <i class="fas fa-trash"></i> Excluir
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <div class="page-card">
+                <h4>Informações da Prescrição</h4>
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <th>Paciente:</th>
+                            <td>{{ prescription.patient.nome }}</td>
+                        </tr>
+                        <tr>
+                            <th>Médico:</th>
+                            <td>{{ prescription.doctor.nome }}</td>
+                        </tr>
+                        <tr>
+                            <th>Data:</th>
+                            <td>{{ prescription.date.strftime('%d/%m/%Y') }}</td>
+                        </tr>
+                        <tr>
+                            <th>Status:</th>
+                            <td>
+                                <span class="badge {{ 'bg-warning' if prescription.status == 'pendente' else 'bg-success' if prescription.status == 'dispensado' else 'bg-secondary' }}">
+                                    {{ prescription.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Observações:</th>
+                            <td>{{ prescription.observacoes or 'Nenhuma observação' }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if dispensings %}
+            <div class="page-card mt-4">
+                <h4>Informações de Dispensação</h4>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Responsável</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for dispensing in dispensings %}
+                        <tr>
+                            <td>{{ dispensing.date.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ dispensing.dispenser.nome }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-md-8">
+            <div class="page-card">
+                <h4>Medicamentos Prescritos</h4>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Medicamento</th>
+                                <th>Quantidade</th>
+                                <th>Instruções</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td>
+                                    <strong>{{ item.medication.nome }}</strong>
+                                    {% if item.medication.concentracao %}
+                                    <div><small>{{ item.medication.concentracao }}</small></div>
+                                    {% endif %}
+                                </td>
+                                <td>{{ item.quantidade }}</td>
+                                <td>{{ item.instrucoes or '-' }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="3" class="text-center">Nenhum medicamento na prescrição</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            {% if prescription.status == 'dispensado' and dispensings %}
+            <div class="page-card mt-4">
+                <h4>Medicamentos Dispensados</h4>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Medicamento</th>
+                                <th>Lote</th>
+                                <th>Validade</th>
+                                <th>Quantidade</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dispensing in dispensings %}
+                            <tr>
+                                <td>{{ dispensing.batch.medication.nome }}</td>
+                                <td>{{ dispensing.batch.lote }}</td>
+                                <td>{{ dispensing.batch.validade.strftime('%d/%m/%Y') }}</td>
+                                <td>{{ dispensing.quantidade }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    function confirmarExclusao(url) {
+        if (confirm('Tem certeza que deseja excluir esta prescrição? Esta ação não pode ser desfeita.')) {
+            window.location.href = url;
+        }
+    }
+</script>
+{% endblock %}

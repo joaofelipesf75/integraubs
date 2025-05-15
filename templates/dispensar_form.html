@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+
+{% block title %}Dispensar Medicamentos - Integra UBS{% endblock %}
+
+{% block content %}
+<div class="dispensar-form-page">
+    <div class="page-header">
+        <div>
+            <h2>Dispensar Medicamentos</h2>
+            <p class="mb-0">Prescrição #{{ prescription.id }} - {{ prescription.patient.nome }}</p>
+        </div>
+        <div class="page-actions">
+            <a href="{{ url_for('ver_prescricao', id=prescription.id) }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </a>
+        </div>
+    </div>
+    
+    <div class="page-card">
+        <form action="{{ url_for('dispensar_medicamentos', prescription_id=prescription.id) }}" method="POST">
+            <div class="mb-4">
+                <h5>Itens da Prescrição</h5>
+                
+                {% if item_batches %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Medicamento</th>
+                                <th>Quantidade Prescrita</th>
+                                <th>Lote Disponível</th>
+                                <th>Quantidade a Dispensar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item_batch in item_batches %}
+                            <tr>
+                                <td>
+                                    <strong>{{ item_batch.medication.nome }}</strong>
+                                    {% if item_batch.medication.concentracao %}
+                                    <div><small>{{ item_batch.medication.concentracao }}</small></div>
+                                    {% endif %}
+                                </td>
+                                <td>{{ item_batch.item.quantidade }}</td>
+                                <td>
+                                    {% if item_batch.batches %}
+                                    <select class="form-select" name="batch_id[]" required>
+                                        <option value="" disabled selected>Selecione um lote</option>
+                                        {% for batch in item_batch.batches %}
+                                        <option value="{{ batch.id }}">
+                                            {{ batch.lote }} - Validade: {{ batch.validade.strftime('%d/%m/%Y') }} 
+                                            (Disponível: {{ batch.quantidade_atual }})
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    {% else %}
+                                    <div class="alert alert-warning mb-0">
+                                        Sem estoque disponível
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <input type="number" class="form-control" name="quantidade[]" 
+                                           min="0" max="{{ item_batch.item.quantidade }}" 
+                                           value="{{ item_batch.item.quantidade if item_batch.batches else 0 }}"
+                                           {{ 'disabled' if not item_batch.batches }}>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-4 text-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-check"></i> Confirmar Dispensação
+                    </button>
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    Não há itens para dispensar nesta prescrição.
+                </div>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

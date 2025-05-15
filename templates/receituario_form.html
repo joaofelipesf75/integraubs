@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if modelo %}Editar{% else %}Novo{% endif %} Modelo de Receituário - Integra UBS{% endblock %}
+
+{% block content %}
+<div class="receituario-form-page">
+    <div class="page-header">
+        <div>
+            <h2>{% if modelo %}Editar{% else %}Novo{% endif %} Modelo de Receituário</h2>
+            <p class="mb-0">{% if modelo %}Edite as propriedades do modelo de receituário{% else %}Crie um novo modelo para seus receituários médicos{% endif %}</p>
+        </div>
+        <div class="page-actions">
+            <a href="{{ url_for('receituarios') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </a>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-8">
+            <div class="page-card">
+                <form method="POST" action="{{ url_for('editar_receituario', id=modelo.id) if modelo else url_for('novo_receituario') }}">
+                    <div class="form-group mb-3">
+                        <label for="nome">Nome do Modelo <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="nome" name="nome" required 
+                               value="{{ modelo.nome if modelo else '' }}">
+                        <div class="form-text">Nome descritivo para identificar o modelo</div>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="descricao">Descrição</label>
+                        <textarea class="form-control" id="descricao" name="descricao" rows="2">{{ modelo.descricao if modelo else '' }}</textarea>
+                        <div class="form-text">Descrição opcional para o modelo</div>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="cabecalho">Cabeçalho <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="cabecalho" name="cabecalho" rows="4" required>{{ modelo.cabecalho if modelo else 'RECEITUÁRIO MÉDICO\nSISTEMA INTEGRA UBS' }}</textarea>
+                        <div class="form-text">Texto do cabeçalho do receituário. Use quebras de linha (\n) para formatar.</div>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="rodape">Rodapé</label>
+                        <textarea class="form-control" id="rodape" name="rodape" rows="2">{{ modelo.rodape if modelo else 'Este receituário é válido por 30 dias conforme regulamentação.' }}</textarea>
+                        <div class="form-text">Texto opcional para o rodapé do receituário</div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label for="cor_primaria">Cor Primária</label>
+                                <input type="color" class="form-control form-control-color" id="cor_primaria" name="cor_primaria" 
+                                       value="{{ modelo.cor_primaria if modelo else '#0066cc' }}">
+                                <div class="form-text">Cor principal para títulos</div>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label for="fonte_titulo">Fonte do Título</label>
+                                        <select class="form-select" id="fonte_titulo" name="fonte_titulo">
+                                            <option value="Arial" {% if modelo and modelo.fonte_titulo == 'Arial' %}selected{% elif not modelo %}selected{% endif %}>Arial</option>
+                                            <option value="Times" {% if modelo and modelo.fonte_titulo == 'Times' %}selected{% endif %}>Times New Roman</option>
+                                            <option value="Courier" {% if modelo and modelo.fonte_titulo == 'Courier' %}selected{% endif %}>Courier</option>
+                                            <option value="Helvetica" {% if modelo and modelo.fonte_titulo == 'Helvetica' %}selected{% endif %}>Helvetica</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label for="tamanho_titulo">Tamanho do Título</label>
+                                        <input type="number" class="form-control" id="tamanho_titulo" name="tamanho_titulo" min="10" max="24" 
+                                               value="{{ modelo.tamanho_titulo if modelo else 16 }}">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="fonte_corpo">Fonte do Corpo</label>
+                                <select class="form-select" id="fonte_corpo" name="fonte_corpo">
+                                    <option value="Arial" {% if modelo and modelo.fonte_corpo == 'Arial' %}selected{% elif not modelo %}selected{% endif %}>Arial</option>
+                                    <option value="Times" {% if modelo and modelo.fonte_corpo == 'Times' %}selected{% endif %}>Times New Roman</option>
+                                    <option value="Courier" {% if modelo and modelo.fonte_corpo == 'Courier' %}selected{% endif %}>Courier</option>
+                                    <option value="Helvetica" {% if modelo and modelo.fonte_corpo == 'Helvetica' %}selected{% endif %}>Helvetica</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="tamanho_corpo">Tamanho do Corpo</label>
+                                <input type="number" class="form-control" id="tamanho_corpo" name="tamanho_corpo" min="8" max="14" 
+                                       value="{{ modelo.tamanho_corpo if modelo else 11 }}">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            {% if modelo %}
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="ativo" name="ativo" 
+                                       {% if modelo.ativo %}checked{% endif %}>
+                                <label class="form-check-label" for="ativo">
+                                    Modelo Ativo
+                                </label>
+                                <div class="form-text">Desmarque para desativar este modelo</div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="padrao" name="padrao" 
+                                       {% if modelo and modelo.padrao %}checked{% endif %}>
+                                <label class="form-check-label" for="padrao">
+                                    Definir como Modelo Padrão
+                                </label>
+                                <div class="form-text">Use este modelo como padrão para todos os receituários</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group text-end mt-4">
+                        <button type="button" class="btn btn-info" onclick="previewReceituario()">
+                            <i class="fas fa-eye"></i> Visualizar
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Salvar Modelo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="page-card">
+                <h5>Instruções</h5>
+                <p class="text-muted">Preencha o formulário para personalizar como os receituários médicos serão gerados.</p>
+                
+                <div class="alert alert-info">
+                    <h6>Dicas:</h6>
+                    <ul class="mb-0">
+                        <li>Use <strong>\n</strong> no cabeçalho para quebrar linhas</li>
+                        <li>A cor primária será aplicada aos títulos</li>
+                        <li>Apenas fontes básicas são suportadas (Arial, Times, Courier, Helvetica)</li>
+                        <li>Apenas um modelo pode ser definido como padrão</li>
+                    </ul>
+                </div>
+                
+                <h6 class="mt-3">Visualização:</h6>
+                <div id="preview-container" class="py-2">
+                    <div class="alert alert-secondary">
+                        Clique em "Visualizar" para ver uma prévia do modelo
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    function previewReceituario() {
+        // Simula a visualização do receituário com base nos dados do formulário
+        let cabecalho = document.getElementById('cabecalho').value;
+        let corPrimaria = document.getElementById('cor_primaria').value;
+        let fonteTitulo = document.getElementById('fonte_titulo').value;
+        let tamanhoTitulo = document.getElementById('tamanho_titulo').value;
+        
+        // Criar prévia
+        let previewHtml = `
+            <div class="receituario-preview p-3 border rounded" style="background-color: white;">
+                <div style="color: ${corPrimaria}; font-family: ${fonteTitulo}; font-size: ${tamanhoTitulo}px; font-weight: bold; text-align: center;">
+                    ${cabecalho.replace(/\n/g, '<br>')}
+                </div>
+                <hr>
+                <div style="font-size: 12px;">
+                    <p><strong>IDENTIFICAÇÃO DO PACIENTE</strong></p>
+                    <p>Nome: <strong>Exemplo de Paciente</strong></p>
+                    <p>Data da Receita: ${new Date().toLocaleDateString('pt-BR')}</p>
+                </div>
+                <hr>
+                <div style="font-size: 12px;">
+                    <p><strong>MEDICAMENTOS PRESCRITOS</strong></p>
+                    <p><strong>1) Paracetamol</strong></p>
+                    <p style="font-style: italic;">500mg, comprimido</p>
+                    <p>Quantidade: 20</p>
+                    <p>Instruções: Tomar 1 comprimido a cada 8 horas se houver dor.</p>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('preview-container').innerHTML = previewHtml;
+    }
+</script>
+{% endblock %}

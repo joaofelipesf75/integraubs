@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Importar Medicamentos - Integra UBS{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Medicamentos Importados das Planilhas</h2>
+    <div class="page-actions">
+        <a href="{{ url_for('medicamentos') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Voltar
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="page-card">
+            <div class="alert alert-success">
+                <h5><i class="fas fa-check-circle"></i> Medicamentos Importados Automaticamente:</h5>
+                <p>Todos os medicamentos das planilhas foram importados automaticamente para o sistema.</p>
+                <p>O sistema tem <strong>{{ medicamentos_no_banco }}</strong> medicamentos e <strong>{{ lotes_no_banco }}</strong> lotes no estoque.</p>
+                <p>As planilhas contêm <strong>{{ total_meds }}</strong> medicamentos que são importados automaticamente na inicialização do sistema.</p>
+                <p>Você pode verificar e gerenciar o estoque na <a href="{{ url_for('medicamentos') }}">página de medicamentos</a>.</p>
+            </div>
+
+            <div class="mt-4">
+                <h4>Lista de Medicamentos Importados</h4>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Princípio Ativo</th>
+                                <th>Forma</th>
+                                <th>Concentração</th>
+                                <th>Qtd. Lotes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for med in medications %}
+                            <tr>
+                                <td>{{ med.nome }}</td>
+                                <td>{{ med.principio_ativo }}</td>
+                                <td>{{ med.forma }}</td>
+                                <td>{{ med.concentracao }}</td>
+                                <td>{{ med.lotes|length }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Scripts não necessários, pois a importação é automática -->
+{% endblock %}

@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+
+{% block title %}Selecionar Modelo de Receituário - Integra UBS{% endblock %}
+
+{% block content %}
+<div class="selecionar-modelo-page">
+    <div class="page-header">
+        <div>
+            <h2>Selecionar Modelo de Receituário</h2>
+            <p class="mb-0">Escolha um modelo para a prescrição #{{ prescription.id }}</p>
+        </div>
+        <div class="page-actions">
+            <a href="{{ url_for('ver_prescricao', id=prescription.id) }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </a>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-12 mb-4">
+            <div class="page-card">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> Selecione um dos modelos abaixo para gerar o receituário médico.
+                    Você também pode <a href="{{ url_for('receituarios') }}">gerenciar os modelos disponíveis</a>.
+                </div>
+            </div>
+        </div>
+        
+        {% for modelo in modelos %}
+        <div class="col-md-4 mb-4">
+            <div class="page-card h-100 modelo-card {% if modelo.padrao %}modelo-padrao{% endif %}" 
+                 onclick="selecionarModelo('{{ url_for('receituario_medico', prescription_id=prescription.id, modelo_id=modelo.id) }}')">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ modelo.nome }}</h5>
+                    {% if modelo.padrao %}
+                    <span class="badge bg-success">Padrão</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if modelo.descricao %}
+                    <p class="text-muted">{{ modelo.descricao }}</p>
+                    {% endif %}
+                    
+                    <div class="form-text">
+                        <p><strong>Cabeçalho:</strong> <br>
+                        <pre class="p-2 bg-light border rounded">{{ modelo.cabecalho }}</pre></p>
+                        
+                        <p>
+                            <strong>Cor Primária:</strong> 
+                            <span class="color-sample" style="background-color: {{ modelo.cor_primaria }}"></span>
+                            {{ modelo.cor_primaria }}
+                        </p>
+                    </div>
+                </div>
+                <div class="card-footer text-center">
+                    <a href="{{ url_for('receituario_medico', prescription_id=prescription.id, modelo_id=modelo.id) }}" class="btn btn-primary">
+                        <i class="fas fa-file-download"></i> Gerar com este modelo
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="page-card">
+                <div class="card-body text-center">
+                    <p>Nenhum modelo de receituário ativo encontrado.</p>
+                    <a href="{{ url_for('novo_receituario') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Criar Modelo
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+    .color-sample {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        margin-right: 5px;
+        vertical-align: middle;
+        border: 1px solid #ccc;
+    }
+    
+    pre {
+        white-space: pre-wrap;
+        max-height: 80px;
+        overflow-y: auto;
+    }
+    
+    .modelo-card {
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .modelo-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    
+    .modelo-padrao {
+        border: 2px solid #28a745;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    function selecionarModelo(url) {
+        window.location.href = url;
+    }
+</script>
+{% endblock %}

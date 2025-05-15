@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block title %}Erro {{ error_code }} - Integra UBS{% endblock %}
+
+{% block content %}
+<div class="error-page text-center py-5">
+    <div class="error-code">
+        <h1>{{ error_code }}</h1>
+    </div>
+    <div class="error-message">
+        <h2>{{ error_message }}</h2>
+        <p class="mt-4">Desculpe, ocorreu um erro ao processar sua solicitação.</p>
+        <a href="{{ url_for('dashboard') if current_user.is_authenticated else url_for('login') }}" class="btn btn-primary mt-3">
+            <i class="fas fa-home"></i> Voltar para a página inicial
+        </a>
+    </div>
+</div>
+{% endblock %}

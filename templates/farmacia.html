@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+
+{% block title %}Prescrições - Integra UBS{% endblock %}
+
+{% block content %}
+<div class="farmacia-page">
+    <div class="page-header">
+        <h2>Controle de Prescrições</h2>
+        <div class="page-actions">
+            {% if current_user.role in ['admin', 'medico'] %}
+            <a href="{{ url_for('nova_prescricao') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Nova Prescrição
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="page-card">
+        <ul class="nav nav-tabs mb-4" id="prescricoesTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="todas-tab" data-bs-toggle="tab" data-bs-target="#todas" type="button" role="tab" aria-controls="todas" aria-selected="true">
+                    Todas
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="pendentes-tab" data-bs-toggle="tab" data-bs-target="#pendentes" type="button" role="tab" aria-controls="pendentes" aria-selected="false">
+                    Pendentes
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="dispensadas-tab" data-bs-toggle="tab" data-bs-target="#dispensadas" type="button" role="tab" aria-controls="dispensadas" aria-selected="false">
+                    Dispensadas
+                </button>
+            </li>
+        </ul>
+        
+        <div class="tab-content" id="prescricoesTabContent">
+            <div class="tab-pane fade show active" id="todas" role="tabpanel" aria-labelledby="todas-tab">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Paciente</th>
+                                <th>Médico</th>
+                                <th>Data</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for prescription in prescriptions %}
+                            <tr>
+                                <td>{{ prescription.id }}</td>
+                                <td>{{ prescription.patient.nome }}</td>
+                                <td>{{ prescription.doctor.nome }}</td>
+                                <td>{{ prescription.date.strftime('%d/%m/%Y') }}</td>
+                                <td>
+                                    <span class="badge {{ 'bg-warning' if prescription.status == 'pendente' else 'bg-success' if prescription.status == 'dispensado' else 'bg-secondary' }}">
+                                        {{ prescription.status }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('ver_prescricao', id=prescription.id) }}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if prescription.status == 'pendente' and current_user.role in ['admin', 'farmaceutico'] %}
+                                        <a href="{{ url_for('dispensar_medicamentos', prescription_id=prescription.id) }}" class="btn btn-sm btn-success">
+                                            <i class="fas fa-pills"></i>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center">Nenhuma prescrição encontrada</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="tab-pane fade" id="pendentes" role="tabpanel" aria-labelledby="pendentes-tab">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Paciente</th>
+                                <th>Médico</th>
+                                <th>Data</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for prescription in prescriptions if prescription.status == 'pendente' %}
+                            <tr>
+                                <td>{{ prescription.id }}</td>
+                                <td>{{ prescription.patient.nome }}</td>
+                                <td>{{ prescription.doctor.nome }}</td>
+                                <td>{{ prescription.date.strftime('%d/%m/%Y') }}</td>
+                                <td>
+                                    <span class="badge bg-warning">{{ prescription.status }}</span>
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('ver_prescricao', id=prescription.id) }}" class="btn btn-sm btn-info" title="Visualizar">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if current_user.role in ['admin', 'farmaceutico'] %}
+                                        <a href="{{ url_for('dispensar_medicamentos', prescription_id=prescription.id) }}" class="btn btn-sm btn-success" title="Dispensar">
+                                            <i class="fas fa-pills"></i>
+                                        </a>
+                                        {% endif %}
+                                        {% if current_user.role in ['admin', 'medico'] %}
+                                        <a href="{{ url_for('editar_prescricao', id=prescription.id) }}" class="btn btn-sm btn-warning" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a href="#" onclick="confirmarExclusao('{{ url_for('excluir_prescricao', id=prescription.id) }}')" class="btn btn-sm btn-danger" title="Excluir">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center">Nenhuma prescrição pendente encontrada</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="tab-pane fade" id="dispensadas" role="tabpanel" aria-labelledby="dispensadas-tab">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Paciente</th>
+                                <th>Médico</th>
+                                <th>Data</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for prescription in prescriptions if prescription.status == 'dispensado' %}
+                            <tr>
+                                <td>{{ prescription.id }}</td>
+                                <td>{{ prescription.patient.nome }}</td>
+                                <td>{{ prescription.doctor.nome }}</td>
+                                <td>{{ prescription.date.strftime('%d/%m/%Y') }}</td>
+                                <td>
+                                    <span class="badge bg-success">{{ prescription.status }}</span>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('ver_prescricao', id=prescription.id) }}" class="btn btn-sm btn-info">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center">Nenhuma prescrição dispensada encontrada</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    function confirmarExclusao(url) {
+        if (confirm('Tem certeza que deseja excluir esta prescrição? Esta ação não pode ser desfeita.')) {
+            window.location.href = url;
+        }
+    }
+</script>
+{% endblock %}

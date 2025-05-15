@@ -1,0 +1,53 @@
+SISTEMA INTEGRA UBS - ATUALIZAÇÕES RECENTES
+================================================================
+
+Versão: 2.1.0 (14/05/2025)
+
+## NOVOS RECURSOS:
+
+1. Adicionada função de exclusão de pacientes:
+   - Botão de exclusão na lista de pacientes
+   - Modal de confirmação para evitar exclusões acidentais
+   - Limpeza automática de registros relacionados (prontuários, prescrições)
+
+2. Corrigido problema de incompatibilidade com PostgreSQL no Render:
+   - Simplificada inicialização do SQLAlchemy
+   - Evitado conflito de metaclasses
+   - Melhorada detecção e manipulação de erros
+
+3. Melhorias no controle de acesso:
+   - Farmacêuticos e enfermeiros têm acesso completo aos módulos de pacientes,
+     medicamentos, prescrições e relatórios
+   - Implementada verificação de permissões em todas as rotas
+
+4. Aprimorado script de inicialização para Render:
+   - Verificação automática de conexão com banco de dados
+   - Criação de tabelas e usuários padrão na primeira execução
+   - Tratamento adequado de erros
+
+5. Outras correções:
+   - Corrigida função de edição de pacientes
+   - Aprimorada validação de datas de nascimento
+   - Melhorado tratamento de erros em todo o sistema
+
+
+## INSTRUÇÕES DE ATUALIZAÇÃO:
+
+1. Para atualização local:
+   - Substitua os arquivos atuais pelos novos
+   - Reinicie o aplicativo
+
+2. Para atualização no Render:
+   - Faça o upload dos arquivos do ZIP para seu repositório GitHub
+   - Reconecte o serviço do Render ao repositório
+   - Ou crie um novo serviço usando o arquivo render.yaml incluído
+
+
+## ACESSO:
+
+Usuários padrão:
+- admin / 1234
+- medico / 1234
+- enfermeiro / 1234
+- farmaceutico / 1234
+- recepcionista / 1234

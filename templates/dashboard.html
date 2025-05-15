@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Integra UBS{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+    <!-- Cards de estatísticas no topo -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card-estatistica bg-white rounded-3 shadow-sm d-flex align-items-center">
+                <div class="icone-estatistica bg-primary rounded-circle text-white d-flex align-items-center justify-content-center me-3">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div>
+                    <div class="texto-estatistica text-muted small">Total de Pacientes</div>
+                    <div class="valor-estatistica fw-bold fs-4">{{ patients_count }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-estatistica bg-white rounded-3 shadow-sm d-flex align-items-center">
+                <div class="icone-estatistica bg-success rounded-circle text-white d-flex align-items-center justify-content-center me-3">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <div>
+                    <div class="texto-estatistica text-muted small">Consultas Realizadas</div>
+                    <div class="valor-estatistica fw-bold fs-4">{{ consultas_realizadas }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-estatistica bg-white rounded-3 shadow-sm d-flex align-items-center">
+                <div class="icone-estatistica bg-purple rounded-circle text-white d-flex align-items-center justify-content-center me-3">
+                    <i class="fas fa-calendar-day"></i>
+                </div>
+                <div>
+                    <div class="texto-estatistica text-muted small">Consultas do Mês</div>
+                    <div class="valor-estatistica fw-bold fs-4">{{ consultas_mes }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-estatistica bg-white rounded-3 shadow-sm d-flex align-items-center">
+                <div class="icone-estatistica bg-danger rounded-circle text-white d-flex align-items-center justify-content-center me-3">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div>
+                    <div class="texto-estatistica text-muted small">Medicamentos Vencidos</div>
+                    <div class="valor-estatistica fw-bold fs-4">{{ medicamentos_vencidos }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Conteúdo principal: atividades recentes e relatório -->
+    <div class="row g-4">
+        <!-- Atividades Recentes - Lado esquerdo -->
+        <div class="col-md-7">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white">
+                    <h5 class="m-0">Atividades Recentes</h5>
+                </div>
+                <div class="card-body">
+                    <div class="lista-atividades">
+                        {% for atividade in atividades_recentes %}
+                        <div class="atividade d-flex align-items-start {% if not loop.last %}mb-3{% endif %}">
+                            <div class="icone-atividade bg-{{ atividade.cor }} rounded-circle text-white d-flex align-items-center justify-content-center me-3">
+                                <i class="fas fa-{{ atividade.icone }}"></i>
+                            </div>
+                            <div>
+                                <div class="texto-atividade">{{ atividade.texto }}</div>
+                                <div class="tempo-atividade text-muted small">{{ atividade.tempo }}</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Relatório e informações importantes - Lado direito -->
+        <div class="col-md-5">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white">
+                    <h5 class="m-0">Resumo do Sistema</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h6 class="fw-bold mb-3">Medicamentos com Estoque Baixo</h6>
+                        {% if medicamentos_resumo %}
+                            {% for med in medicamentos_resumo %}
+                            <div class="progress mb-2" style="height: 20px;">
+                                <div class="progress-bar bg-{{ med.cor }}" role="progressbar" style="width: {{ med.porcentagem }}%" aria-valuenow="{{ med.porcentagem }}" aria-valuemin="0" aria-valuemax="100">
+                                    {{ med.nome }} ({{ med.porcentagem }}%)
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Não há medicamentos com estoque baixo no momento.
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <h6 class="fw-bold mb-3">Mensagens não lidas</h6>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            {% if unread_messages is defined and unread_messages > 0 %}
+                                Você tem {{ unread_messages }} mensagens não lidas.
+                                <a href="{{ url_for('mensagens') }}" class="alert-link">Ver mensagens</a>
+                            {% else %}
+                                Você não tem mensagens não lidas.
+                            {% endif %}
+                        </div>
+                        
+                        <div class="alert alert-primary">
+                            <i class="fas fa-comments me-2"></i>
+                            Para enviar mensagens instantâneas, use o <strong>Bate-papo Rápido</strong> no canto inferior direito.
+                            <button class="btn btn-sm btn-primary mt-2" onclick="document.getElementById('chatToggle').click()">
+                                <i class="fas fa-comment-dots me-1"></i> Abrir chat
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Botão para abrir o chat rápido
+    let chatOpenerBtn = document.querySelector('button[onclick="document.getElementById(\'chatToggle\').click()"]');
+    if (chatOpenerBtn) {
+        chatOpenerBtn.addEventListener('click', function() {
+            let chatToggle = document.getElementById('chatToggle');
+            if (chatToggle) {
+                chatToggle.click();
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
